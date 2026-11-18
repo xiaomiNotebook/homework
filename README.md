@@ -6,11 +6,31 @@
 
 ## 仓库结构
 
-- `src/original/`：官方 MiCode Notes 源码快照，仅用于对照，原则上不直接修改。
-- `src/maintained/`：小组标注、维护和优化后的代码。
-- `doc/UML/`：UML 图与设计分析材料。
-- `doc/screenshots/`：功能运行与验证截图。
-- `doc/testing/`：测试计划、测试用例与测试报告。
+```text
+homework/
+├── src/
+│   ├── original/                   # 官方源码只读快照
+│   └── maintained/                 # 标注、维护和优化的唯一工作代码
+├── doc/
+│   ├── annotations/member-1..6/    # 六人的代码阅读与标注材料
+│   ├── evidence/member-1..6/       # 六项维护任务的个人证据包
+│   ├── report-reading-maintenance/ # 阅读、标注和维护报告
+│   ├── report-quality/             # 质量分析报告及工具原始结果
+│   ├── ppt/                        # PPT、演示脚本和答辩材料
+│   ├── UML/                        # UML 源文件和导出图
+│   ├── screenshots/                # 最终公共截图和索引
+│   └── testing/                    # 测试材料和汇总结果
+└── README.md
+```
+
+- `src/original/` 永远不用于日常修改。
+- `src/maintained/` 初始内容与原始快照一致；代码标注和后续维护都在这里完成。构建时把该目录视为项目根目录。
+- 标注过程材料放入 `doc/annotations/member-N/`，维护设计、测试和前后截图放入 `doc/evidence/member-N/`，不要混放。
+
+详细分工和操作方法见：
+
+- [`doc/项目六人分工与进度计划.md`](doc/项目六人分工与进度计划.md)
+- [`doc/Git分支使用说明.md`](doc/Git分支使用说明.md)
 
 ## 上游来源
 
@@ -19,7 +39,7 @@
 - 导入分支：`master`
 - 导入提交：`81a66024fe48eaa2206b854430856fe3875ff3ba`
 
-官方项目的 `NOTICE`、README 和源代码版权声明均保留在 `src/original/` 中。小组 Fork 保留官方完整提交历史；本仓库不包含嵌套 Git 仓库。
+官方项目的 `NOTICE`、README 和源代码版权声明保留在 `src/original/` 与工作副本 `src/maintained/` 中。小组 Fork 保留官方完整提交历史；本仓库不包含嵌套 Git 仓库。
 
 ## 分支约定
 
