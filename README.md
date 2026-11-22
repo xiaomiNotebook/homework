@@ -28,3 +28,15 @@
 - `member-1` 至 `member-6`：六位成员的个人工作分支，均从 `develop` 创建。
 
 成员完成修改后向 `develop` 提交 Pull Request，经审核和测试后合并；最终稳定版本再合并到 `master`。
+
+## 构建 maintained 代码
+
+`src/maintained/` 已保留完整上游源码、资源、Manifest、NOTICE 和版权声明，并补充 Gradle Wrapper。需要 JDK 17 或更高版本及 Android SDK Platform 34：
+
+```powershell
+cd src/maintained
+$env:ANDROID_HOME = "你的 Android SDK 路径"
+.\gradlew.bat assembleDebug
+```
+
+macOS / Linux 使用 `./gradlew assembleDebug`。详细兼容说明见 `src/maintained/README.md`，初始化构建记录见 `doc/testing/initialization-build.md`。
