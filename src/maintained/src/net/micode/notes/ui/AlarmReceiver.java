@@ -29,6 +29,14 @@ import android.content.Intent;
  *
  * <p>数据依赖：Intent 的 data 仍是 AlarmInitReceiver 注册时写入的
  * content://.../note/&lt;id&gt;，改类但不改 data，AlarmAlertActivity 才能解析出便签 id。
+ *
+ * <p>职责边界：本类不校验便签是否存在、不判断是否需要响铃，也不修改任何数据；
+ * 只做“广播 → 界面”的组件转发。屏幕是否点亮、是否锁屏等前置条件的处理全部在
+ * AlarmAlertActivity 中完成。
+ *
+ * <p>生命周期与异常路径：onReceive 返回后接收器即结束，不能在这里做耗时操作；
+ * 若系统禁止后台启动界面（或目标 Activity 被禁用），startActivity 会抛异常，
+ * 本类不做捕获，由系统记录崩溃——这是既有实现，标注阶段不修改。
  */
 public class AlarmReceiver extends BroadcastReceiver {
     @Override

@@ -6,39 +6,43 @@
 |---|---|
 | 负责人 | 成员 6 |
 | 工作分支 | `member-6` |
-| 标注对象分支基线 | `8bd46b3`（`member-6` / `origin/member-6` / `origin/develop` 同一点） |
+| 标注对象分支基线 | `e455484`（已合并 `origin/develop`；标注内容始于 `9567281`、`c939c28`） |
 | 上游原始提交 | `81a66024fe48eaa2206b854430856fe3875ff3ba`（MiCode Notes） |
 | 代码工作目录 | `src/maintained/` |
 | 只读对照目录 | `src/original/` |
-| 阅读与标注完成日期 | 2026-11-22 |
+| 阅读与标注完成日期 | 2026-11-22（首轮）；2026-11-23（补充复核） |
 
 ## 2. 文件清单
 
-下表路径均相对于 `src/maintained/src/net/micode/notes/`，行数为本次标注后的实际总行数（含注释与空行）。
+下表路径均相对于 `src/maintained/src/net/micode/notes/`，行数为第 2 轮补充后的实际总行数（含注释与空行）。
 
 | # | 文件 | 标注后行数 | 所属层 |
 |---|---|---:|---|
 | 1 | `tool/BackupUtils.java` | 447 | 工具/数据导出 |
-| 2 | `ui/AlarmAlertActivity.java` | 215 | 界面（提醒） |
-| 3 | `ui/AlarmInitReceiver.java` | 86 | 广播接收（提醒重建） |
-| 4 | `ui/AlarmReceiver.java` | 41 | 广播接收（提醒触发） |
-| 5 | `ui/DateTimePicker.java` | 592 | 自定义控件 |
+| 2 | `ui/AlarmAlertActivity.java` | 221 | 界面（提醒） |
+| 3 | `ui/AlarmInitReceiver.java` | 94 | 广播接收（提醒重建） |
+| 4 | `ui/AlarmReceiver.java` | 49 | 广播接收（提醒触发） |
+| 5 | `ui/DateTimePicker.java` | 599 | 自定义控件 |
 | 6 | `ui/DateTimePickerDialog.java` | 134 | 对话框控件 |
 | 7 | `ui/DropdownMenu.java` | 88 | 自定义控件 |
-| 8 | `ui/NotesPreferenceActivity.java` | 497 | 界面（设置/同步） |
-| 合计 | 8 个文件 | 2100 | — |
+| 8 | `ui/NotesPreferenceActivity.java` | 501 | 界面（设置/同步） |
+| 合计 | 8 个文件 | 2133 | — |
 
 ### 2.1 关于代码来源的说明（重要）
 
 开始本任务时，`src/maintained/` 下只有一个 `README.md`，没有可标注的 Java 源码；8 个目标文件仅存在于 `src/original/src/net/micode/notes/` 下。
 
-依据 `src/maintained/README.md` 中“开始维护时应从 `src/original/` 复制所需代码”的约定，本次把上述 8 个文件从 `src/original/` 原样复制到 `src/maintained/` 对应路径后再添加注释：
+依据 `src/maintained/README.md` 中“开始维护时应从 `src/original/` 复制所需代码”的约定，首轮把上述 8 个文件从 `src/original/` 原样复制到 `src/maintained/` 对应路径后再添加注释：
 
 - 复制过程中未修改任何代码行；
 - `src/original/` 未做任何改动；
 - 已用“剥离注释后逐行比对”的方式验证：8 个文件的代码与 `src/original` 完全一致，差异只有新增注释（详见 `03-annotation-log.md` 第 3 节）。
 
-由于 `src/maintained/` 目前缺少 `AndroidManifest.xml` 与 `res/`，无法作为完整工程构建，因此本次以静态检查与代码比对代替构建验证。
+之后组长完成了 `src/maintained/` 的完整工程初始化（补齐 `AndroidManifest.xml`、`res/`、`NOTICE` 等），
+本分支在合并 `origin/develop` 后，8 个已标注文件被完整保留，未被未标注的副本覆盖。
+
+需要说明的是：仓库当前没有提供 `build.xml`、`project.properties` 或 Gradle 脚本，
+无法在仓库内直接构建，因此本次以静态检查与代码比对代替构建验证；构建验证待构建脚本或 Android SDK 环境就绪后补做。
 
 ## 3. 模块职责
 
@@ -96,7 +100,8 @@
 
 ## 5. 阅读中的疑问
 
-1. `src/maintained/` 目前没有 `AndroidManifest.xml` 与 `res/`，无法完成真实构建；后续由谁、在哪个分支补齐，需要组长确认。
+1. `src/maintained/` 的工程树已由组长补齐（`AndroidManifest.xml`、`res/`、`NOTICE` 等），但仓库仍未提供
+   `build.xml`、`project.properties` 或 Gradle 脚本，无法在仓库内直接构建；后续以何种方式构建、由谁提供构建脚本，需要组长确认。
 2. 标注 PR 是否必须先关联 Issue？当前环境没有 `gh` CLI 与可用 Token，无法创建 Issue，也未获得现成编号。
 3. 注释量与注释行数的统一统计口径（是否统计空注释行、是否统计原有注释）全组尚未统一，本材料采用的口径见 `03-annotation-log.md`。
 4. `BackupUtils` 单例持有 `Context`，实际调用方传入的是 Activity 还是 Application Context，需在维护阶段核实。

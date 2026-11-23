@@ -59,6 +59,10 @@ import net.micode.notes.gtask.remote.GTaskSyncService;
  *
  * <p>生命周期要点：注册的广播接收器必须在 onDestroy 反注册；账号列表在打开对话框时快照到
  * mOriAccounts，用于 onResume 判断“用户是否刚从系统设置里新增了账号”。
+ *
+ * <p>前置条件与异常路径：本界面假定运行环境已配置 Google 账号体系，
+ * 若无任何账号，只展示“添加账号”入口；跳转系统添加账号页失败时仅打印日志、不做提示。
+ * 更换账号后的云端字段清理在后台线程执行，与界面刷新不同步，存在短暂的状态不一致窗口。
  */
 public class NotesPreferenceActivity extends PreferenceActivity {
     /** 本界面所有偏好共用的文件名。 */

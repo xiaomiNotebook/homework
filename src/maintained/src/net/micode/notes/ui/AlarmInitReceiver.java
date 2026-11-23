@@ -37,6 +37,14 @@ import net.micode.notes.data.Notes.NoteColumns;
  *
  * <p>边界条件：只查询 alert_date 大于当前时间的普通便签（TYPE_NOTE），
  * 已过期的提醒不会补发；本方法也不修改数据库，不做“已提醒”标记的清理。
+ *
+ * <p>职责与生命周期：本接收器只在系统广播到达时短暂存活，onReceive 返回即结束；
+ * 因此它必须自己完成查询并立即注册闹钟，不能依赖任何成员状态。
+ *
+ * <p>异常路径：query 返回 null（Provider 不可用）时整体跳过，不注册任何提醒；
+ * 未对 AlarmManager 做空判断，若系统服务异常会直接抛 NullPointerException；
+ * PendingIntent 使用 flags=0，在新版本系统上可能因缺少可变性标记而告警。
+ * 以上均为既有实现，只记录不修改。
  */
 public class AlarmInitReceiver extends BroadcastReceiver {
 

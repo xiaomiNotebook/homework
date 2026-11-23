@@ -5,44 +5,49 @@
 | 项 | 说明 |
 |---|---|
 | 统计对象 | `member-6` 分支工作区中 `src/maintained/src/net/micode/notes/` 下 8 个 Java 文件 |
-| 基线提交 | `8bd46b3`（与 `origin/member-6`、`origin/develop` 同一点） |
+| 基线提交 | `e455484`（已合并 `origin/develop`；8 个文件的标注内容沿用 `9567281` / `c939c28`） |
 | 对照文件 | `src/original/src/net/micode/notes/` 下同名文件 |
 | 统计方法 | `git diff --no-index -U0 <original> <maintained>`，统计以 `+` 开头且非 `+++` 的行 |
 | “注释行”定义 | 去掉行首空白后以 `//`、`/*`、`/**`、`*` 开头的整行 |
 | 是否含行尾注释 | 否。本次全部为整行注释块，没有添加行尾注释 |
 | 是否含原有注释 | “新增注释行”不含；“标注后注释行总数”含原文件自带注释 |
-| 统计时间 | 2026-11-22 21:46（Asia/Shanghai） |
+| 统计时间 | 2026-11-23 09:23（Asia/Shanghai），第 2 轮复核补充后重新统计 |
 | 说明 | 计划文档中的“约 1416 行”为工作量参考（有效代码行），与本表的物理行数口径不同，不可直接比较 |
 
 ## 2. 逐文件统计
 
-| # | 文件 | 原始行数 | 新增注释行 | 标注后行数 | 标注后注释行总数 |
-|---|---|---:|---:|---:|---:|
-| 1 | `tool/BackupUtils.java` | 344 | 103 | 447 | 154 |
-| 2 | `ui/AlarmAlertActivity.java` | 158 | 57 | 215 | 76 |
-| 3 | `ui/AlarmInitReceiver.java` | 65 | 21 | 86 | 36 |
-| 4 | `ui/AlarmReceiver.java` | 30 | 11 | 41 | 26 |
-| 5 | `ui/DateTimePicker.java` | 485 | 107 | 592 | 203 |
-| 6 | `ui/DateTimePickerDialog.java` | 90 | 44 | 134 | 59 |
-| 7 | `ui/DropdownMenu.java` | 61 | 27 | 88 | 42 |
-| 8 | `ui/NotesPreferenceActivity.java` | 388 | 109 | 497 | 135 |
-| 合计 | 8 个文件 | 1621 | 479 | 2100 | 731 |
+| # | 文件 | 原始行数 | 新增注释行 | 其中第 2 轮补充 | 标注后行数 | 标注后注释行总数 |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | `tool/BackupUtils.java` | 344 | 103 | 0 | 447 | 154 |
+| 2 | `ui/AlarmAlertActivity.java` | 158 | 63 | 6 | 221 | 82 |
+| 3 | `ui/AlarmInitReceiver.java` | 65 | 29 | 8 | 94 | 44 |
+| 4 | `ui/AlarmReceiver.java` | 30 | 19 | 8 | 49 | 34 |
+| 5 | `ui/DateTimePicker.java` | 485 | 114 | 7 | 599 | 210 |
+| 6 | `ui/DateTimePickerDialog.java` | 90 | 44 | 0 | 134 | 59 |
+| 7 | `ui/DropdownMenu.java` | 61 | 27 | 0 | 88 | 42 |
+| 8 | `ui/NotesPreferenceActivity.java` | 388 | 113 | 4 | 501 | 139 |
+| 合计 | 8 个文件 | 1621 | 512 | 33 | 2133 | 764 |
 
 派生指标（同一口径）：
 
-- 新增注释行占标注后总行数：479 / 2100 = **22.8%**
-- 标注后注释行总数占比：731 / 2100 = **34.8%**
-- 原文件自带注释行：731 − 479 = **252 行**
+- 新增注释行占标注后总行数：512 / 2133 = **24.0%**
+- 标注后注释行总数占比：764 / 2133 = **35.8%**
+- 原文件自带注释行：764 − 512 = **252 行**
 
 ## 3. 代码一致性验证
 
-因 `src/maintained/` 初始为空目录（仅有 `README.md`），8 个文件按 `src/maintained/README.md` 的约定从 `src/original/` 复制后加注。
-为证明“只加注释、未改行为”，做了两项检查：
+本轮开始时 `src/maintained/` 已由组长初始化为完整工程树（含 `AndroidManifest.xml`、`res/`），
+先前提交的 8 个标注文件在合并 `origin/develop` 后被完整保留，未被未标注版本覆盖。
 
-1. **删除行检查**：对 8 个文件执行 `git diff --no-index -U0`，统计以 `-` 开头（非 `---`）的行，结果为 **0**，即没有删除或改写任何原有行。
-2. **剥离注释后逐行比对**：对每个文件去掉注释行与空行后与 `src/original` 同名文件做逐字符比较，8 个文件结果均为 **一致**。
+为证明“只加注释、未改行为”，每次改动后都执行两项检查：
 
-结论：本次改动为纯注释新增，代码逻辑、导入、格式与原有注释均未改动。
+1. **删除行检查**：对 8 个文件执行 `git diff --no-index -U0`（对照 `src/original`），
+   统计以 `-` 开头（非 `---`）的行，两次结果均为 **0**，即没有删除或改写任何原有行。
+2. **剥离注释后逐行比对**：对每个文件去掉注释行与空行后与 `src/original` 同名文件做逐字符比较，
+   两次结果均为 8/8 **一致**。
+3. **本轮改动范围检查**：`git status` 只显示 5 个被补充注释的文件，无其他文件被改动。
+
+结论：累计 512 行改动全部为注释新增，代码逻辑、导入、格式与原有注释均未改动。
 
 ## 4. 逐文件注释位置与目的
 
@@ -65,11 +70,12 @@
 | `getExportToTextPrintStream` | 说明成功时缓存文件名/目录的副作用 |
 | `generateFileMountedOnSDcard` | 说明文件名规则、`mkdir` 与 `mkdirs` 的差异风险 |
 
-### 4.2 `ui/AlarmAlertActivity.java`（+57 行）
+### 4.2 `ui/AlarmAlertActivity.java`（+63 行）
 
 | 注释位置 | 目的 |
 |---|---|
 | 类声明前 | 说明在提醒链路中的位置、Intent 前置条件、便签有效性校验、生命周期收口 |
+| 类声明前（第 2 轮补充） | 补充职责边界（只展示/播放/关闭，不改提醒时间、不取消闹钟）与边界条件（空摘要、截断、锁屏按钮） |
 | 字段 `mNoteId` / `mSnippet` / `SNIPPET_PREW_MAX_LEN` | 说明数据来源与截断阈值 |
 | `onCreate` | 说明窗口标志意图、摘要截断、解析失败的异常路径 |
 | `isScreenOn` | 说明该判断同时影响点亮屏幕与“进入便签”按钮 |
@@ -78,27 +84,30 @@
 | `onClick` / `onDismiss` | 说明点击只负责跳转、铃声与结束界面统一在 onDismiss 收口 |
 | `stopAlarmSound` | 说明置空引用保证幂等 |
 
-### 4.3 `ui/AlarmInitReceiver.java`（+21 行）
+### 4.3 `ui/AlarmInitReceiver.java`（+29 行）
 
 | 注释位置 | 目的 |
 |---|---|
 | 类声明前 | 说明为什么需要开机重建、查询条件与“不修改数据库”的边界 |
+| 类声明前（第 2 轮补充） | 补充职责与接收器生命周期、异常路径（query 返回 null、AlarmManager 未判空、PendingIntent flags=0） |
 | `PROJECTION` / 列下标常量 | 说明投影与下标对应关系 |
 | `onReceive` | 说明主线程同步查询的代价、PendingIntent 身份由 data Uri 决定 |
 | 循环体内 | 说明 data 中编入便签 id 的用途、`RTC_WAKEUP` 的语义 |
 
-### 4.4 `ui/AlarmReceiver.java`（+11 行）
+### 4.4 `ui/AlarmReceiver.java`（+19 行）
 
 | 注释位置 | 目的 |
 |---|---|
 | 类声明前 | 说明这一层存在的原因、为何必须加 `FLAG_ACTIVITY_NEW_TASK`、data 不能被改写 |
+| 类声明前（第 2 轮补充） | 补充职责边界（不校验、不改数据）、生命周期（onReceive 返回即结束）与异常路径（后台启动失败） |
 | 方法体内 | 说明复用 Intent 只替换组件时会保留 data 与 flags |
 
-### 4.5 `ui/DateTimePicker.java`（+107 行）
+### 4.5 `ui/DateTimePicker.java`（+114 行）
 
 | 注释位置 | 目的 |
 |---|---|
 | 类声明前 | 说明为何自绘控件、mDate 为唯一事实来源、mInitialising 的作用 |
+| 类声明前（第 2 轮补充） | 补充职责边界（只做换算不校验业务合法性）与前置条件、异常路径（越界值被 Calendar 宽松校正） |
 | 范围常量 | 说明 12 小时制小时范围是 1~12 而非 0~11 |
 | `mDateDisplayValues` 等字段 | 说明 7 天窗口、mIsAm/mIs24HourView 只影响显示 |
 | `mOnDateChangedListener` | 说明用 newVal − oldVal 差值平移日期，实现连续跨月 |
@@ -136,11 +145,12 @@
 | `setOnDropdownMenuItemClickListener` | 说明允许 null 与空判断原因 |
 | `findItem` / `setTitle` | 说明供调用方动态改菜单项与按钮文案 |
 
-### 4.8 `ui/NotesPreferenceActivity.java`（+109 行）
+### 4.8 `ui/NotesPreferenceActivity.java`（+113 行）
 
 | 注释位置 | 目的 |
 |---|---|
 | 类声明前 | 说明设置页职责边界、界面结构、生命周期与广播反注册 |
+| 类声明前（第 2 轮补充） | 补充前置条件（无账号时的表现）与异常路径（跳转失败仅记日志、后台清理与刷新不同步） |
 | 各 Preference 键常量 | 说明每个键的用途与“必须保持稳定”的约束 |
 | `onCreate` | 说明加载偏好、注册广播、插入 header，以及只在 onDestroy 反注册的既有行为 |
 | `onResume` | 说明新增账号的差集自动选中算法与 mOriAccounts 为 null 的边界 |
@@ -161,4 +171,20 @@
 
 1. `04-peer-review.md` 待成员 1 复核后补齐（复核意见、修订结果、构建结果、PR 链接）。
 2. 第 6 节所列疑似缺陷（D1–D6）尚未创建 Issue：当前环境无 `gh` CLI 与可用 Token，未获得 Issue 编号，不伪造编号。
-3. 因 `src/maintained/` 缺 `AndroidManifest.xml` 与 `res/`，本次未做真实构建；构建验证需在工程补齐后补做。
+3. `src/maintained/` 已补齐 `AndroidManifest.xml`、`res/`、`NOTICE`，但仓库未提供 `build.xml`、`project.properties` 或 Gradle 脚本，因此仍无法在本仓库内完成真实构建；本轮改为“静态检查 + 与 `src/original` 的代码比对”，构建验证待构建脚本或 Android SDK 环境就绪后补做。
+
+## 6. 第 2 轮补充说明（2026-11-23）
+
+本轮按“职责、设计意图、前置条件、生命周期、边界条件、异常路径、不显然算法”七项逐文件复核，
+对偏薄的 5 个文件补充了类级说明，共新增 33 行注释：
+
+| 文件 | 补充内容 | 新增行数 |
+|---|---|---:|
+| `ui/AlarmAlertActivity.java` | 职责边界、空摘要/截断/锁屏按钮等边界条件 | 6 |
+| `ui/AlarmInitReceiver.java` | 职责与接收器生命周期、query 为 null 等异常路径 | 8 |
+| `ui/AlarmReceiver.java` | 职责边界、生命周期、后台启动界面失败的异常路径 | 8 |
+| `ui/DateTimePicker.java` | 职责边界、前置条件、越界值的宽松校正行为 | 7 |
+| `ui/NotesPreferenceActivity.java` | 前置条件（无账号）、跳转失败与异步清理的异常路径 | 4 |
+
+其余 3 个文件（`BackupUtils`、`DateTimePickerDialog`、`DropdownMenu`）经复核已覆盖七项要求，本轮未改动。
+本轮同样通过“删除行 = 0”与“剥离注释后逐字符一致（8/8）”校验。

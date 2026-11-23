@@ -43,6 +43,9 @@ import java.io.IOException;
 /**
  * 便签闹钟到点后的提醒界面：锁屏/亮屏弹出对话框并循环播放闹钟铃声。
  *
+ * <p>职责边界：本类只负责“展示提醒 + 播放铃声 + 关闭提醒”，
+ * 不负责修改便签的提醒时间，也不负责取消 AlarmManager 中的闹钟。
+ *
  * <p>在流程中的位置：{@link AlarmInitReceiver} 开机或应用启动时把未来的提醒重新注册到
  * AlarmManager；到点后系统广播给 {@link AlarmReceiver}；AlarmReceiver 再启动本 Activity。
  * 因此本类只在“提醒已到点且便签仍有效”时才会被展示。
@@ -53,6 +56,9 @@ import java.io.IOException;
  *   <li>便签必须仍存在于 note 表且不在回收站，否则立即 finish（防止提醒已被删除的便签）；</li>
  *   <li>对话框关闭时必须停止铃声并结束界面，避免后台持续响铃。</li>
  * </ul>
+ *
+ * <p>边界条件：摘要为空时不显示正文；超过 {@link #SNIPPET_PREW_MAX_LEN} 的摘要会截断；
+ * 屏幕未点亮时不提供“进入便签”按钮，避免从锁屏直接跳到编辑界面。
  */
 public class AlarmAlertActivity extends Activity implements OnClickListener, OnDismissListener {
     /** 当前提醒对应的便签 id，来自 Intent 的 data 路径段。 */
