@@ -24,7 +24,12 @@ import net.micode.notes.data.Notes;
 import net.micode.notes.tool.ResourceParser;
 
 
+/**
+ * 4x 尺寸的桌面小部件。与 2x 版本结构相同，只是布局、背景图和类型常量不同，其余逻辑复用父类
+ * NoteWidgetProvider。
+ */
 public class NoteWidgetProvider_4x extends NoteWidgetProvider {
+    // 系统要求刷新小部件时调用（刚添加到桌面、定时刷新等），转交给父类统一处理。
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         super.update(context, appWidgetManager, appWidgetIds);

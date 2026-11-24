@@ -32,11 +32,17 @@ import net.micode.notes.tool.ResourceParser;
 import net.micode.notes.ui.NoteEditActivity;
 import net.micode.notes.ui.NotesListActivity;
 
+/**
+ * 桌面小部件的公共基类。
+ * 2x、4x 两种尺寸共有的逻辑都放在这里：查询小部件绑定的便签、构造 RemoteViews、设置点击跳转。
+ * 子类只需要提供布局、背景图和小部件类型这三个差异点（模板方法模式）。
+ */
 public abstract class NoteWidgetProvider extends AppWidgetProvider {
+    // 查询小部件对应便签所需的列：id、背景色、摘要。下面三个常量是它们在游标中的下标。
     public static final String [] PROJECTION = new String [] {
-        NoteColumns.ID,
-        NoteColumns.BG_COLOR_ID,
-        NoteColumns.SNIPPET
+            NoteColumns.ID,
+            NoteColumns.BG_COLOR_ID,
+            NoteColumns.SNIPPET
     };
 
     public static final int COLUMN_ID           = 0;
@@ -45,6 +51,8 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
 
     private static final String TAG = "NoteWidgetProvider";
 
+    // 用户把小部件从桌面移除时由系统回调。这里并不删除便签，只是把便签上记录的 widget_id 重
+    // 置为无效值，解除绑定。
     @Override
     public void onDeleted(Context context, int[] appWidgetIds) {
         ContentValues values = new ContentValues();
@@ -57,6 +65,8 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    // 按 widget id 查询绑定的便签，并排除已经进入回收站的便签（parent_id 不等于回收站文件夹
+    // id），避免小部件显示已被删除的内容。
     private Cursor getNoteWidgetInfo(Context context, int widgetId) {
         return context.getContentResolver().query(Notes.CONTENT_NOTE_URI,
                 PROJECTION,
@@ -65,12 +75,20 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
                 null);
     }
 
+    // 供子类 onUpdate 调用的入口，默认不启用隐私模式。
     protected void update(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         update(context, appWidgetManager, appWidgetIds, false);
     }
 
+    /**
+     * 真正的刷新逻辑，逐个小部件处理：
+     * 1) 有绑定的便签：显示摘要和对应背景色，点击后以 ACTION_VIEW 打开该便签；
+     * 2) 没有绑定的便签：显示“暂无内容”提示，点击后以 ACTION_INSERT_OR_EDIT 新建便签。
+     * privacyMode 为 true 时只显示固定提示文字，点击进入便签列表，不暴露便签内容。从本文件
+     * 看，目前唯一的调用传入的是 false，这个分支暂时没有被用到。
+     */
     private void update(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds,
-            boolean privacyMode) {
+                        boolean privacyMode) {
         for (int i = 0; i < appWidgetIds.length; i++) {
             if (appWidgetIds[i] != AppWidgetManager.INVALID_APPWIDGET_ID) {
                 int bgId = ResourceParser.getDefaultBgId(context);
@@ -82,6 +100,8 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
 
                 Cursor c = getNoteWidgetInfo(context, appWidgetIds[i]);
                 if (c != null && c.moveToFirst()) {
+                    // 同一个 widget id 理论上只会绑定一条便签，出现多条属于数据异常，直接放
+                    // 弃本次刷新。注意这里是 return，会连带跳过后面还没处理的小部件。
                     if (c.getCount() > 1) {
                         Log.e(TAG, "Multiple message with same widget id:" + appWidgetIds[i]);
                         c.close();
@@ -124,6 +144,7 @@ public abstract class NoteWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    // 以下三个抽象方法由 2x / 4x 子类实现：背景图资源、布局文件、小部件类型。
     protected abstract int getBgResourceId(int bgId);
 
     protected abstract int getLayoutId();
