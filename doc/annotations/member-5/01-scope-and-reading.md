@@ -92,13 +92,13 @@ GTaskClient      ──── HTTP 客户端单例：登录鉴权、拉取列表
 
 | 编号 | 位置 | 描述 | 影响 |
 |---|---|---|---|
-| D1 | `GTaskManager.mCancelled` / `mSyncing` | 两个跨线程访问的布尔字段未声明 `volatile`，取消标志可能存在可见性问题 | 取消请求在极端情况下不被同步线程及时观察到 |
-| D2 | `GTaskManager.mActivity` | 单例长期持有 Activity 上下文 | 设置页退出后可能内存泄漏 |
-| D3 | `GTaskClient.getResponseContent` | gzip/deflate 分支先 `entity.getContent()` 赋给 input，又再次 `entity.getContent()` 构造解压流；第二次取流可能已读到 EOF | 响应体在压缩编码下可能解析为空，导致登录/拉取失败 |
-| D4 | `GTaskClient.loginGoogleAccount` | `invalidateToken=true` 时递归取新 token，但递归返回值未赋回 `authToken`，本层仍返回旧 token | token 失效重试时可能仍拿旧 token 登录 |
-| D5 | `GTaskManager.doContentSync` 的 `SYNC_ACTION_UPDATE_CONFLICT` | 冲突时直接以本地覆盖远端，未做合并 | 双方都修改时云端修改丢失 |
-| D6 | `GTaskASyncTask.onPostExecute` | 完成回调在新建子线程执行，回调内调用 `stopSelf`/`sendBroadcast` | 线程安全与生命周期边界需关注 |
-| D7 | `GTaskClient` 整体 | 使用已废弃的 `org.apache.http` / `DefaultHttpClient` | 新 Android 版本需额外配置；已由 develop 上的构建环境部分适配 |
+| [D1](https://github.com/xiaomiNotebook/homework/issues/11) | `GTaskManager.mCancelled` / `mSyncing` | 两个跨线程访问的布尔字段未声明 `volatile`，取消标志可能存在可见性问题 | 取消请求在极端情况下不被同步线程及时观察到 |
+| [D2](https://github.com/xiaomiNotebook/homework/issues/12) | `GTaskManager.mActivity` | 单例长期持有 Activity 上下文 | 设置页退出后可能内存泄漏 |
+| [D3](https://github.com/xiaomiNotebook/homework/issues/13) | `GTaskClient.getResponseContent` | gzip/deflate 分支先 `entity.getContent()` 赋给 input，又再次 `entity.getContent()` 构造解压流；第二次取流可能已读到 EOF | 响应体在压缩编码下可能解析为空，导致登录/拉取失败 |
+| [D4](https://github.com/xiaomiNotebook/homework/issues/14) | `GTaskClient.loginGoogleAccount` | `invalidateToken=true` 时递归取新 token，但递归返回值未赋回 `authToken`，本层仍返回旧 token | token 失效重试时可能仍拿旧 token 登录 |
+| [D5](https://github.com/xiaomiNotebook/homework/issues/15) | `GTaskManager.doContentSync` 的 `SYNC_ACTION_UPDATE_CONFLICT` | 冲突时直接以本地覆盖远端，未做合并 | 双方都修改时云端修改丢失 |
+| [D6](https://github.com/xiaomiNotebook/homework/issues/16) | `GTaskASyncTask.onPostExecute` | 完成回调在新建子线程执行，回调内调用 `stopSelf`/`sendBroadcast` | 线程安全与生命周期边界需关注 |
+| [D7](https://github.com/xiaomiNotebook/homework/issues/17) | `GTaskClient` 整体 | 使用已废弃的 `org.apache.http` / `DefaultHttpClient` | 新 Android 版本需额外配置；已由 develop 上的构建环境部分适配 |
 
 ## 6. 疑问与待确认项
 
