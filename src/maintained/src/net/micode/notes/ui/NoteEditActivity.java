@@ -72,8 +72,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 
+/**
+ * 便签编辑页，应用中最核心的界面。主要职责：
+ * 1) 根据 Intent 的 action 决定是打开已有便签（ACTION_VIEW）还是新建 / 编辑便签（
+ *    ACTION_INSERT_OR_EDIT）。入口包括便签列表、搜索结果、桌面小部件、桌面快捷方式和通话记
+ *    录；
+ * 2) 在普通文本模式与清单模式之间切换；
+ * 3) 处理背景色、字号、提醒、分享、发送到桌面、删除等菜单操作；
+ * 4) 在 onPause 和返回键时自动保存。
+ *
+ * 同时实现了三个接口：OnClickListener（处理背景色 / 字号按钮点击）、
+ * NoteSettingChangedListener（接收 WorkingNote 的设置变化回调）、OnTextViewChangeListener（
+ * 接收清单条目的回车 / 删除回调）。
+ * 数据读写主要借助 WorkingNote 完成，本类只负责界面和流程控制。
+ */
 public class NoteEditActivity extends Activity implements OnClickListener,
         NoteSettingChangedListener, OnTextViewChangeListener {
+    // 标题栏中几个控件的持有者（ViewHolder），集中保存引用，避免重复调用 findViewById。四个
+    // 字段依次是：修改时间、提醒图标、提醒时间、背景色按钮。
     private class HeadViewHolder {
         public TextView tvModified;
 
@@ -84,6 +100,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         public ImageView ibSetBgColor;
     }
 
+    // 背景色选择：颜色按钮的 id → 颜色编号。
     private static final Map<Integer, Integer> sBgSelectorBtnsMap = new HashMap<Integer, Integer>();
     static {
         sBgSelectorBtnsMap.put(R.id.iv_bg_yellow, ResourceParser.YELLOW);
@@ -93,6 +110,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         sBgSelectorBtnsMap.put(R.id.iv_bg_white, ResourceParser.WHITE);
     }
 
+    // 背景色选择：颜色编号 → “当前选中”勾选标记的控件 id。
     private static final Map<Integer, Integer> sBgSelectorSelectionMap = new HashMap<Integer, Integer>();
     static {
         sBgSelectorSelectionMap.put(ResourceParser.YELLOW, R.id.iv_bg_yellow_select);
@@ -102,6 +120,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         sBgSelectorSelectionMap.put(ResourceParser.WHITE, R.id.iv_bg_white_select);
     }
 
+    // 字号选择：字号按钮的 id → 字号编号。
     private static final Map<Integer, Integer> sFontSizeBtnsMap = new HashMap<Integer, Integer>();
     static {
         sFontSizeBtnsMap.put(R.id.ll_font_large, ResourceParser.TEXT_LARGE);
@@ -110,6 +129,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         sFontSizeBtnsMap.put(R.id.ll_font_super, ResourceParser.TEXT_SUPER);
     }
 
+    // 字号选择：字号编号 → “当前选中”标记的控件 id。
     private static final Map<Integer, Integer> sFontSelectorSelectionMap = new HashMap<Integer, Integer>();
     static {
         sFontSelectorSelectionMap.put(ResourceParser.TEXT_LARGE, R.id.iv_large_select);
@@ -120,6 +140,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private static final String TAG = "NoteEditActivity";
 
+    // 以下是界面控件的引用，在 initResources() 中统一获取。
     private HeadViewHolder mNoteHeaderHolder;
 
     private View mHeadViewPanel;
@@ -128,27 +149,40 @@ public class NoteEditActivity extends Activity implements OnClickListener,
 
     private View mFontSizeSelector;
 
+    // 普通文本模式下的整块输入框。
     private EditText mNoteEditor;
 
     private View mNoteEditorPanel;
 
+    // 当前正在编辑的便签数据模型，几乎所有数据操作都通过它完成。
     private WorkingNote mWorkingNote;
 
+    // 字号偏好保存在 SharedPreferences 中，对所有便签全局生效，而不是每条便签单独设置。
     private SharedPreferences mSharedPrefs;
     private int mFontSizeId;
 
     private static final String PREFERENCE_FONT_SIZE = "pref_font_size";
 
+    // 桌面快捷方式的名称最多取正文的前 10 个字符。
     private static final int SHORTCUT_ICON_TITLE_MAX_LEN = 10;
 
+    // 清单模式保存时使用的前缀标记：√ 表示已完成，□ 表示未完成。数据库里的正文直接带着这些
+    // 符号（形如“√ 买牛奶”），读取时再解析回复选框状态。
     public static final String TAG_CHECKED = String.valueOf('\u221A');
     public static final String TAG_UNCHECKED = String.valueOf('\u25A1');
 
+    // 清单模式下的条目容器，每个条目是一个“复选框 + NoteEditText”。
     private LinearLayout mEditTextList;
 
+    // 从搜索结果进入时的搜索关键词，用于在正文中高亮显示；其他入口为空串。
     private String mUserQuery;
     private Pattern mPattern;
 
+    /**
+     * 创建界面。savedInstanceState 为空说明是全新启动，需要根据 Intent 初始化数据（
+     * initActivityState），失败就直接关闭页面；不为空说明是被系统回收后重建，数据恢复交给
+     * onRestoreInstanceState。最后绑定控件。
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -168,6 +202,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
+        // 被回收前只保存了便签 id，所以这里构造一个 ACTION_VIEW 的 Intent，按 id 重新加载便
+        // 签。
         if (savedInstanceState != null && savedInstanceState.containsKey(Intent.EXTRA_UID)) {
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.putExtra(Intent.EXTRA_UID, savedInstanceState.getLong(Intent.EXTRA_UID));
@@ -179,6 +215,16 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    /**
+     * 根据 Intent 初始化 mWorkingNote，返回 false 表示初始化失败（调用方应当关闭页面）。分
+     * 三种情况：
+     * 1) ACTION_VIEW：打开已有便签，id 来自 EXTRA_UID。如果是从搜索结果进来，则 id 和关
+     *    键词来自搜索相关的 extra。便签不存在时跳回列表页并提示；
+     * 2) ACTION_INSERT_OR_EDIT：新建便签，可能带有文件夹、小部件、背景色信息。如果是通话
+     *    记录（有电话号码和通话时间），先查找是否已存在对应的通话便签，有就打开，没有就新建
+     *    并转为通话便签；
+     * 3) 其他 action：不支持，直接关闭。
+     */
     private boolean initActivityState(Intent intent) {
         /**
          * If the user specified the {@link Intent#ACTION_VIEW} but not provided with id,
@@ -197,6 +243,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 mUserQuery = intent.getStringExtra(SearchManager.USER_QUERY);
             }
 
+            // 便签不存在或不可见（例如已经被删除）：跳回列表页并给出提示。
             if (!DataUtils.visibleInNoteDatabase(getContentResolver(), noteId, Notes.TYPE_NOTE)) {
                 Intent jump = new Intent(this, NotesListActivity.class);
                 startActivity(jump);
@@ -211,6 +258,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                     return false;
                 }
             }
+            // 打开已有便签时默认隐藏软键盘，避免一进来就遮挡内容。
             getWindow().setSoftInputMode(
                     WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN
                             | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
@@ -250,6 +298,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                         bgResId);
             }
 
+            // 新建便签时直接弹出软键盘，方便用户马上输入。
             getWindow().setSoftInputMode(
                     WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
                             | WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
@@ -258,16 +307,25 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             finish();
             return false;
         }
+        // 注册监听，之后 WorkingNote 的背景色、提醒、清单模式等变化都会回调到本 Activity。
         mWorkingNote.setOnSettingStatusChangedListener(this);
         return true;
     }
 
+    // 每次回到前台都重新渲染界面：首次进入和从其他页面返回时都会走到这里。
     @Override
     protected void onResume() {
         super.onResume();
         initNoteScreen();
     }
 
+    /**
+     * 把 mWorkingNote 的数据渲染到界面上：
+     * 1) 设置字号；
+     * 2) 清单模式则重建条目列表，普通模式则显示正文（带搜索高亮）并把光标移到末尾；
+     * 3) 先隐藏所有背景色的“选中”标记，再设置标题栏和编辑区背景；
+     * 4) 显示最后修改时间，并刷新提醒信息。
+     */
     private void initNoteScreen() {
         mNoteEditor.setTextAppearance(this, TextAppearanceResources
                 .getTexAppearanceResource(mFontSizeId));
@@ -295,6 +353,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         showAlertHeader();
     }
 
+    /**
+     * 刷新标题栏中的提醒显示：已设置提醒时，如果提醒时间已过则显示“已过期”，否则显示相对时
+     * 间（例如“30 分钟后”）；没有设置提醒则隐藏图标和文字。
+     */
     private void showAlertHeader() {
         if (mWorkingNote.hasClockAlert()) {
             long time = System.currentTimeMillis();
@@ -312,6 +374,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         };
     }
 
+    // Activity 已经存在又收到新的 Intent 时（例如点击小部件，启动标志为 SINGLE_TOP）会走到
+    // 这里，需要按新 Intent 重新初始化数据。
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -329,10 +393,16 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         if (!mWorkingNote.existInDatabase()) {
             saveNote();
         }
+        // 只保存便签 id，恢复时按 id 从数据库重新加载（见 onRestoreInstanceState）。
         outState.putLong(Intent.EXTRA_UID, mWorkingNote.getNoteId());
         Log.d(TAG, "Save working note id: " + mWorkingNote.getNoteId() + " onSaveInstanceState");
     }
 
+    /**
+     * 触摸事件分发的第一道关口。如果背景色面板或字号面板正在显示，而这次触摸落在面板之外，
+     * 就只关闭面板并吞掉这次事件（返回 true），避免用户点空白处关面板的同时误触到下面的输入
+     * 框。其余情况按默认流程分发。
+     */
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (mNoteBgColorSelector.getVisibility() == View.VISIBLE
@@ -349,6 +419,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return super.dispatchTouchEvent(ev);
     }
 
+    // 判断触摸点是否落在某个控件范围内：用控件在屏幕上的位置和宽高，与触摸点坐标比较，在范
+    // 围内返回 true。
     private boolean inRangeOfView(View view, MotionEvent ev) {
         int []location = new int[2];
         view.getLocationOnScreen(location);
@@ -358,11 +430,12 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 || ev.getX() > (x + view.getWidth())
                 || ev.getY() < y
                 || ev.getY() > (y + view.getHeight())) {
-                    return false;
-                }
+            return false;
+        }
         return true;
     }
 
+    // 绑定控件、设置点击监听，并读取字号偏好。只在 onCreate 中调用一次。
     private void initResources() {
         mHeadViewPanel = findViewById(R.id.note_title);
         mNoteHeaderHolder = new HeadViewHolder();
@@ -397,6 +470,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mEditTextList = (LinearLayout) findViewById(R.id.note_edit_list);
     }
 
+    // 离开界面（切到后台、按返回、被其他页面覆盖）时自动保存，用户不需要手动点保存；随后收
+    // 起可能还开着的选择面板。
     @Override
     protected void onPause() {
         super.onPause();
@@ -406,6 +481,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         clearSettingState();
     }
 
+    /**
+     * 通知桌面小部件刷新：根据小部件类型选择 2x 或 4x 的 Provider，发送
+     * ACTION_APPWIDGET_UPDATE 广播并带上 widget id；类型不支持则记录错误并返回。同时通过
+     * setResult 把结果交给调用方。
+     */
     private void updateWidget() {
         Intent intent = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
         if (mWorkingNote.getWidgetType() == Notes.TYPE_WIDGET_2X) {
@@ -418,17 +498,29 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
 
         intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, new int[] {
-            mWorkingNote.getWidgetId()
+                mWorkingNote.getWidgetId()
         });
 
         sendBroadcast(intent);
         setResult(RESULT_OK, intent);
     }
 
+    /**
+     * 统一处理本页的按钮点击，按 id 分三类：
+     * 1) 标题栏的“背景色”按钮：展开选色面板，并显示当前颜色的选中标记；
+     * 2) 某个颜色按钮：隐藏旧标记、设置新颜色（界面刷新由 onBackgroundColorChanged 回调
+     *    完成），并收起面板；
+     * 3) 某个字号按钮：把偏好保存到 SharedPreferences 并更新选中标记。清单模式下要先取回
+     *    文本再重建列表，字号才会生效；普通模式则直接修改输入框样式。
+     */
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.btn_set_bg_color) {
             mNoteBgColorSelector.setVisibility(View.VISIBLE);
+            /**
+             * 注：下一行续行处有一个多余的负号（-View.VISIBLE）。View.VISIBLE 的值是 0，-0
+             * 仍为 0，所以运行结果没有问题，但属于代码瑕疵。标注阶段不修改，可记入 Issue。
+             */
             findViewById(sBgSelectorSelectionMap.get(mWorkingNote.getBgColorId())).setVisibility(
                     -                    View.VISIBLE);
         } else if (sBgSelectorBtnsMap.containsKey(id)) {
@@ -452,6 +544,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    // 返回键：优先收起已展开的面板（clearSettingState 返回 true 表示收起了面板，本次返回键
+    // 到此为止）；否则先保存，再交给系统正常返回。
     @Override
     public void onBackPressed() {
         if(clearSettingState()) {
@@ -462,6 +556,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         super.onBackPressed();
     }
 
+    // 收起背景色 / 字号选择面板，返回 true 表示确实收起了某个面板。
     private boolean clearSettingState() {
         if (mNoteBgColorSelector.getVisibility() == View.VISIBLE) {
             mNoteBgColorSelector.setVisibility(View.GONE);
@@ -473,6 +568,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return false;
     }
 
+    // WorkingNote 回调：背景色变了。显示新颜色的选中标记，并刷新编辑区和标题栏的背景。
     public void onBackgroundColorChanged() {
         findViewById(sBgSelectorSelectionMap.get(mWorkingNote.getBgColorId())).setVisibility(
                 View.VISIBLE);
@@ -480,6 +576,13 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mHeadViewPanel.setBackgroundResource(mWorkingNote.getTitleBgResId());
     }
 
+    /**
+     * 每次菜单即将显示时动态调整：
+     * 1) 页面正在关闭时不必再构建菜单；
+     * 2) 通话记录便签使用专用菜单；
+     * 3) 清单模式下，“清单模式”菜单项显示为“普通模式”，反之亦然；
+     * 4) 已设置提醒时隐藏“设置提醒”、显示“删除提醒”，没设置时则相反。
+     */
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
         if (isFinishing()) {
@@ -505,6 +608,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return true;
     }
 
+    // 菜单项点击分发：新建便签、删除（先弹确认框）、字号、清单 / 普通模式切换、分享、发送到
+    // 桌面、设置 / 取消提醒。
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -530,6 +635,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 mFontSizeSelector.setVisibility(View.VISIBLE);
                 findViewById(sFontSelectorSelectionMap.get(mFontSizeId)).setVisibility(View.VISIBLE);
                 break;
+            // 在 0（普通）和 MODE_CHECK_LIST 之间切换，真正的界面转换在
+            // onCheckListModeChanged 回调里完成。
             case R.id.menu_list_mode:
                 mWorkingNote.setCheckListMode(mWorkingNote.getCheckListMode() == 0 ?
                         TextNote.MODE_CHECK_LIST : 0);
@@ -553,6 +660,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return true;
     }
 
+    // 弹出日期时间选择对话框，用户确认后设置提醒；对话框的初始时间为当前时间。
     private void setReminder() {
         DateTimePickerDialog d = new DateTimePickerDialog(this, System.currentTimeMillis());
         d.setOnDateTimeSetListener(new OnDateTimeSetListener() {
@@ -574,6 +682,8 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         context.startActivity(intent);
     }
 
+    // 基于当前文件夹新建便签：先保存当前内容，再关闭本页并启动一个全新的编辑页。选择重新启
+    // 动而不是原地清空，是为了避免旧状态残留。
     private void createNewNote() {
         // Firstly, save current editing notes
         saveNote();
@@ -586,6 +696,13 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         startActivity(intent);
     }
 
+    /**
+     * 删除当前便签，只有便签已入库时才需要处理数据库：
+     * 1) 没有开启同步：直接批量删除；
+     * 2) 开启了同步：不直接删除，而是移动到回收站文件夹，这样同步模块才能感知并处理这次
+     *    删除。
+     * 最后把 WorkingNote 标记为已删除，防止页面退出时又被重新保存。
+     */
     private void deleteCurrentNote() {
         if (mWorkingNote.existInDatabase()) {
             HashSet<Long> ids = new HashSet<Long>();
@@ -608,10 +725,18 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mWorkingNote.markDeleted(true);
     }
 
+    // 以“是否配置了同步账号”作为是否开启同步的判断依据。
     private boolean isSyncMode() {
         return NotesPreferenceActivity.getSyncAccountName(this).trim().length() > 0;
     }
 
+    /**
+     * WorkingNote 回调：提醒设置发生变化。闹钟的实际登记在这里完成：通过 AlarmManager，以
+     * RTC_WAKEUP 方式在指定时间向 AlarmReceiver 发送广播，Intent 的 data 携带便签 URI；取消
+     * 时用同样的 PendingIntent 调用 cancel。
+     * 新便签没有 id 就无法绑定闹钟，所以要先保存；如果内容为空保存不了，就提示用户先输入内
+     * 容。
+     */
     public void onClockAlertChanged(long date, boolean set) {
         /**
          * User could set clock to an unsaved note, so before setting the
@@ -642,10 +767,20 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    // WorkingNote 回调：便签内容发生变化，需要刷新桌面小部件。
     public void onWidgetChanged() {
         updateWidget();
     }
 
+    /**
+     * OnTextViewChangeListener 回调：清单模式下，用户在某个条目的行首按退格，表示要把这一条
+     * 合并到上一条。步骤：
+     * 1) 只剩一个条目时不处理；
+     * 2) 把后面条目的序号整体前移一位；
+     * 3) 移除当前条目；
+     * 4) 把被删条目的文字追加到上一条末尾（删除的是第 0 条时则追加到新的第 0 条），并把
+     *    光标放在拼接处。
+     */
     public void onEditTextDelete(int index, String text) {
         int childCount = mEditTextList.getChildCount();
         if (childCount == 1) {
@@ -672,6 +807,10 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         edit.setSelection(length);
     }
 
+    /**
+     * 回调：在清单条目中按回车。NoteEditText 已经把光标之后的文字切出来传入 text，这里在
+     * index 位置插入一个新条目来承接这段文字，把焦点移到新条目开头，并重新给其后的条目编号。
+     */
     public void onEditTextEnter(int index, String text) {
         /**
          * Should not happen, check for debug
@@ -691,6 +830,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    /**
+     * 切换到清单模式：把正文按换行拆成多个条目，空行丢弃，每条生成一个列表项（getListItem
+     * 会解析 √ / □ 前缀），末尾再追加一个空条目方便继续输入。然后隐藏普通输入框，显示条目容
+     * 器。
+     */
     private void switchToListMode(String text) {
         mEditTextList.removeAllViews();
         String[] items = text.split("\n");
@@ -708,6 +852,12 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         mEditTextList.setVisibility(View.VISIBLE);
     }
 
+    /**
+     * 返回带高亮的文本：把所有匹配搜索关键词的片段设置背景色；没有关键词时返回原文（null 当
+     * 作空串处理）。
+     * 注意：关键词被直接当作正则表达式编译，如果用户搜索的内容含有正则特殊字符（例如“(”），
+     * 可能抛出 PatternSyntaxException，属于潜在隐患，可记入 Issue。
+     */
     private Spannable getHighlightQueryResult(String fullText, String userQuery) {
         SpannableString spannable = new SpannableString(fullText == null ? "" : fullText);
         if (!TextUtils.isEmpty(userQuery)) {
@@ -725,6 +875,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return spannable;
     }
 
+    /**
+     * 创建一个清单条目视图（复选框 + NoteEditText）。会根据正文前缀还原勾选状态：以 √ 开头
+     * 为已完成并加删除线，以 □ 开头为未完成，去掉前缀后才显示文字。
+     * 复选框状态改变时同步切换删除线；最后把当前 Activity 注册为条目的监听器并设置序号。
+     */
     private View getListItem(String item, int index) {
         View view = LayoutInflater.from(this).inflate(R.layout.note_edit_list_item, null);
         final NoteEditText edit = (NoteEditText) view.findViewById(R.id.et_edit_text);
@@ -756,6 +911,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return view;
     }
 
+    // 回调：条目有没有文字发生变化时，显示或隐藏该条目前面的复选框（空行不显示复选框）。
     public void onTextChange(int index, boolean hasText) {
         if (index >= mEditTextList.getChildCount()) {
             Log.e(TAG, "Wrong index, should not happen");
@@ -768,6 +924,14 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    /**
+     * WorkingNote 回调：模式切换。
+     * 1) 切到清单模式：用普通输入框中的文本重建列表；
+     * 2) 切回普通模式：先把列表内容汇总回 WorkingNote（getWorkingText 的返回值表示是否有
+     *    已勾选项）。如果一项都没勾选，说明文本里只有 □ 标记，需要把它们去掉，让普通文本保
+     *    持干净；有已勾选项时保留标记，避免丢失完成状态。再把文本放回输入框并切换可见性。
+     * 回调发生时 WorkingNote 的 mMode 还是旧值，所以 getWorkingText 仍会按清单模式读取列表。
+     */
     public void onCheckListModeChanged(int oldMode, int newMode) {
         if (newMode == TextNote.MODE_CHECK_LIST) {
             switchToListMode(mNoteEditor.getText().toString());
@@ -782,6 +946,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    /**
+     * 把界面上的内容同步回 WorkingNote，返回值表示是否存在已勾选的条目。
+     * 清单模式下逐个读取条目，跳过空条目，按“√ 文字”或“□ 文字”拼接，每条一行；普通模式直接
+     * 取输入框文本。每次保存或切换模式之前都要先调用它，保证数据模型是最新的。
+     */
     private boolean getWorkingText() {
         boolean hasChecked = false;
         if (mWorkingNote.getCheckListMode() == TextNote.MODE_CHECK_LIST) {
@@ -805,6 +974,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return hasChecked;
     }
 
+    // 保存便签：先把界面内容同步到 WorkingNote，再交给它写库。只有保存成功才设置 RESULT_OK。
     private boolean saveNote() {
         getWorkingText();
         boolean saved = mWorkingNote.saveNote();
@@ -821,6 +991,11 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         return saved;
     }
 
+    /**
+     * 把当前便签以快捷方式的形式发送到桌面：构造一个指向本页的 ACTION_VIEW Intent（携带便签
+     * id）作为快捷方式的目标，名称取正文的前 10 个字，再通过 INSTALL_SHORTCUT 广播通知桌面
+     * 启动器创建。
+     */
     private void sendToDesktop() {
         /**
          * Before send message to home, we should make sure that current
@@ -856,6 +1031,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
         }
     }
 
+    // 生成快捷方式名称：先去掉清单标记符号，再截取前 10 个字符。
     private String makeShortcutIconTitle(String content) {
         content = content.replace(TAG_CHECKED, "");
         content = content.replace(TAG_UNCHECKED, "");
@@ -863,6 +1039,7 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 SHORTCUT_ICON_TITLE_MAX_LEN) : content;
     }
 
+    // 弹出默认时长（短）的提示；下面的重载可以指定时长。
     private void showToast(int resId) {
         showToast(resId, Toast.LENGTH_SHORT);
     }
