@@ -38,11 +38,24 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 
+/**
+ * 本地 {@code note} 表一行的内存缓存，并聚合其下的 {@link SqlData} 内容列表。
+ *
+ * <p>本类是同步层与本地 ContentProvider 之间的核心适配器：向上为
+ * {@link Task}/{@link TaskList} 提供可序列化为 JSON 的便签/文件夹快照；
+ * 向下负责按需加载数据、记录差异列，并在提交时用版本号做乐观并发控制。</p>
+ *
+ * <p>便签与文件夹共用同一张表：便签拥有完整字段和 data 子表，文件夹只使用
+ * ID、类型和 snippet（名称）。因此 {@link #setContent(JSONObject)} 与
+ * {@link #getContent()} 都按类型分支处理。</p>
+ */
 public class SqlNote {
     private static final String TAG = SqlNote.class.getSimpleName();
 
+    /** 新建对象尚未落库时的占位 ID。 */
     private static final int INVALID_ID = -99999;
 
+    /** 查询 note 表时固定使用的列，下标与下面的常量一一对应。 */
     public static final String[] PROJECTION_NOTE = new String[] {
             NoteColumns.ID, NoteColumns.ALERTED_DATE, NoteColumns.BG_COLOR_ID,
             NoteColumns.CREATED_DATE, NoteColumns.HAS_ATTACHMENT, NoteColumns.MODIFIED_DATE,
@@ -90,6 +103,7 @@ public class SqlNote {
 
     private ContentResolver mContentResolver;
 
+    /** true 表示还没有插入 note 表；提交成功后置为 false。 */
     private boolean mIsCreate;
 
     private long mId;
@@ -114,14 +128,22 @@ public class SqlNote {
 
     private int mWidgetType;
 
+    /** 移动到临时文件夹前所在的文件夹 ID，用于撤销移动。 */
     private long mOriginParent;
 
+    /** 本地行版本号，每次更新自增，用于同步期间检测并发修改。 */
     private long mVersion;
 
+    /** 待写入 note 表的差异列；提交成功后清空。 */
     private ContentValues mDiffNoteValues;
 
+    /** 便签的 data 子记录；文件夹始终为空。 */
     private ArrayList<SqlData> mDataList;
 
+    /**
+     * 创建一个尚未落库的新便签，使用默认背景色、当前时间和空内容。
+     * 类型默认为普通便签，提交时走 insert 分支。
+     */
     public SqlNote(Context context) {
         mContext = context;
         mContentResolver = context.getContentResolver();
@@ -143,6 +165,10 @@ public class SqlNote {
         mDataList = new ArrayList<SqlData>();
     }
 
+    /**
+     * 从查询游标加载一条已存在的记录。
+     * 当前行必须对应一条 note 表记录；普通便签会继续加载 data 子记录。
+     */
     public SqlNote(Context context, Cursor c) {
         mContext = context;
         mContentResolver = context.getContentResolver();
@@ -154,6 +180,10 @@ public class SqlNote {
         mDiffNoteValues = new ContentValues();
     }
 
+    /**
+     * 按便签 ID 从数据库加载；找不到记录时保持默认值，后续提交可能失败。
+     * 该构造器常用于同步时按远端元数据中的 ID 反查本地行。
+     */
     public SqlNote(Context context, long id) {
         mContext = context;
         mContentResolver = context.getContentResolver();
@@ -166,6 +196,10 @@ public class SqlNote {
 
     }
 
+    /**
+     * 按 ID 查询 note 表并加载。
+     * 查询失败或没有记录时只记录日志；游标在 finally 中关闭，避免泄漏。
+     */
     private void loadFromCursor(long id) {
         Cursor c = null;
         try {
@@ -185,6 +219,10 @@ public class SqlNote {
         }
     }
 
+    /**
+     * 按 {@link #PROJECTION_NOTE} 的固定下标读取各列。
+     * 调用方必须保证游标列顺序与本类常量一致。
+     */
     private void loadFromCursor(Cursor c) {
         mId = c.getLong(ID_COLUMN);
         mAlertDate = c.getLong(ALERTED_DATE_COLUMN);
@@ -200,6 +238,10 @@ public class SqlNote {
         mVersion = c.getLong(VERSION_COLUMN);
     }
 
+    /**
+     * 加载当前便签的所有 data 子记录（正文、通话记录等）。
+     * 查询前先清空旧列表，防止重复加载造成数据翻倍；没有子记录时只记录警告。
+     */
     private void loadDataContent() {
         Cursor c = null;
         mDataList.clear();
@@ -226,6 +268,24 @@ public class SqlNote {
         }
     }
 
+    /**
+     * 用便签/文件夹 JSON 更新内存状态和差异列。
+     *
+     * <p>按 {@code meta_note.type} 分三种情况：</p>
+     * <ul>
+     *   <li>{@code TYPE_SYSTEM}：系统文件夹不允许从远端改，直接忽略；</li>
+     *   <li>{@code TYPE_FOLDER}：只接受 snippet 和 type，避免远端覆盖文件夹的
+     *       其他本地属性；</li>
+     *   <li>{@code TYPE_NOTE}：更新提醒、背景色、时间、父文件夹、桌面组件等
+     *       全部字段，并按 data ID 复用已有 {@link SqlData}，没有匹配项才新建。</li>
+     * </ul>
+     *
+     * <p>字段缺失时使用默认值；所有实际变化的列写入 {@link #mDiffNoteValues}，
+     * 提交时只更新这些列。JSON 结构错误会记录日志并返回 false，调用方应跳过
+     * 该节点而不是继续写入半成品数据。</p>
+     *
+     * @return true 表示解析成功；false 表示 JSON 字段缺失或类型错误
+     */
     public boolean setContent(JSONObject js) {
         try {
             JSONObject note = js.getJSONObject(GTaskStringUtils.META_HEAD_NOTE);
@@ -359,6 +419,13 @@ public class SqlNote {
         return true;
     }
 
+    /**
+     * 导出当前记录的 JSON 快照。
+     *
+     * <p>普通便签会带完整 note 字段和 data 数组；文件夹/系统文件夹只导出
+     * ID、类型和 snippet，因为文件夹没有正文。尚未落库的对象没有稳定 ID，
+     * 返回 null 让上层跳过。</p>
+     */
     public JSONObject getContent() {
         try {
             JSONObject js = new JSONObject();
@@ -407,19 +474,35 @@ public class SqlNote {
         return null;
     }
 
+    /**
+     * 修改所属文件夹，并立即记入差异列。
+     * 只改内存和待提交值，真正落库仍由 {@link #commit(boolean)} 完成。
+     */
     public void setParentId(long id) {
         mParentId = id;
         mDiffNoteValues.put(NoteColumns.PARENT_ID, id);
     }
 
+    /**
+     * 记录该本地便签对应的 Google Task GID。
+     * 新建远端任务成功后调用，用于后续更新/删除时定位远端对象。
+     */
     public void setGtaskId(String gid) {
         mDiffNoteValues.put(NoteColumns.GTASK_ID, gid);
     }
 
+    /**
+     * 记录本次成功同步的远端修改时间。
+     * 下次同步时用它和远端 last_modified 比较，判断远端是否又发生变化。
+     */
     public void setSyncId(long syncId) {
         mDiffNoteValues.put(NoteColumns.SYNC_ID, syncId);
     }
 
+    /**
+     * 清除“本地已修改”标记。
+     * 在本地修改成功上传到远端后调用，避免下一轮同步重复上传。
+     */
     public void resetLocalModified() {
         mDiffNoteValues.put(NoteColumns.LOCAL_MODIFIED, 0);
     }
@@ -440,6 +523,23 @@ public class SqlNote {
         return mType == Notes.TYPE_NOTE;
     }
 
+    /**
+     * 把当前差异提交到本地数据库。
+     *
+     * <p>新建记录执行 insert：先移除无效占位 ID，插入 note 行并从返回 Uri 解析
+     * 真实 ID；若是普通便签，再逐条提交 data 子记录。插入失败会抛出
+     * {@link ActionFailureException} 或 {@link IllegalStateException}，由同步管理器
+     * 终止本轮操作。</p>
+     *
+     * <p>已有记录执行 update：版本号先自增；若 {@code validateVersion} 为 true，
+     * 会附加“版本号不大于当前值”的条件，防止同步期间用户修改被旧快照覆盖。
+     * 更新影响 0 行只记录警告，表示用户并发修改，属于可恢复情况。</p>
+     *
+     * <p>提交结束后重新从数据库加载 note 和 data，确保内存快照与真实行一致，
+     * 然后清空差异集合、把对象标记为已落库。</p>
+     *
+     * @param validateVersion 是否启用版本号乐观并发校验
+     */
     public void commit(boolean validateVersion) {
         if (mIsCreate) {
             if (mId == INVALID_ID && mDiffNoteValues.containsKey(NoteColumns.ID)) {

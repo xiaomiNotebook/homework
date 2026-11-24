@@ -32,17 +32,32 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
+/**
+ * Google Tasks 中的“任务”节点，对应小米便签中的一条便签。
+ *
+ * <p>远端任务的 {@code name} 保存便签标题或正文摘要，{@code notes} 保存完整的
+ * 便签元数据 JSON；本类负责在这两种表示之间转换，并根据本地游标、远端修改时间
+ * 和 {@code local_modified} 标记决定同步方向。</p>
+ *
+ * <p>任务在列表中的位置由前驱兄弟节点 {@link #mPriorSibling} 和父分组
+ * {@link #mParent} 共同描述，新建任务时需要把这两个关系一起写入远端动作。</p>
+ */
 public class Task extends Node {
     private static final String TAG = Task.class.getSimpleName();
 
+    /** 远端任务的完成状态；便签本身不使用该字段，但需要原样保留。 */
     private boolean mCompleted;
 
+    /** 完整的便签元数据 JSON 字符串，对应远端任务的 notes 字段。 */
     private String mNotes;
 
+    /** 从 MetaData 节点解析出的便签 JSON，供冲突判断和回写本地使用。 */
     private JSONObject mMetaInfo;
 
+    /** 同一分组中的前一个任务；用于维持远端列表顺序。 */
     private Task mPriorSibling;
 
+    /** 所属的任务分组（对应本地文件夹）。 */
     private TaskList mParent;
 
     public Task() {
@@ -54,6 +69,14 @@ public class Task extends Node {
         mMetaInfo = null;
     }
 
+    /**
+     * 构造“新建任务”动作。
+     *
+     * <p>除名称和 notes 外，还需要写入父分组 GID、目标父类型、所在列表 ID、
+     * 在兄弟节点中的序号以及前驱兄弟 GID。调用前必须已通过
+     * {@link #setParent(TaskList)} 和 {@link #setPriorSibling(Task)} 建立关系，
+     * 否则会在访问父分组时抛出空指针异常。</p>
+     */
     public JSONObject getCreateAction(int actionId) {
         JSONObject js = new JSONObject();
 
@@ -103,6 +126,12 @@ public class Task extends Node {
         return js;
     }
 
+    /**
+     * 构造“更新任务”动作。
+     *
+     * <p>只提交名称、notes 和删除标记；任务的位置变化由移动动作单独处理。
+     * 若 notes 为 null 则不提交该字段，避免把远端已有内容清空。</p>
+     */
     public JSONObject getUpdateAction(int actionId) {
         JSONObject js = new JSONObject();
 
@@ -135,6 +164,12 @@ public class Task extends Node {
         return js;
     }
 
+    /**
+     * 用 Google Tasks 返回的 JSON 填充任务字段。
+     *
+     * <p>远端字段是可选的，只有存在时才覆盖本地缓存；解析失败会抛出
+     * {@link ActionFailureException}，由同步管理器终止本轮同步并提示网络/协议错误。</p>
+     */
     public void setContentByRemoteJSON(JSONObject js) {
         if (js != null) {
             try {
@@ -175,6 +210,13 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 用本地便签 JSON 填充任务名称。
+     *
+     * <p>只在 {@code meta_note.type == TYPE_NOTE} 时处理，并优先取
+     * {@code meta_data} 中 MIME 类型为纯文本的第一条内容作为任务名。
+     * 若 JSON 结构不完整只记录日志，不抛出异常，因为该路径常用于容错同步。</p>
+     */
     public void setContentByLocalJSON(JSONObject js) {
         if (js == null || !js.has(GTaskStringUtils.META_HEAD_NOTE)
                 || !js.has(GTaskStringUtils.META_HEAD_DATA)) {
@@ -204,6 +246,19 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 把当前任务还原成小米便签可识别的 JSON。
+     *
+     * <p>分两种情况：</p>
+     * <ul>
+     *   <li>没有 meta 信息：说明是远端新建、本地尚未建库的任务，只构造最小可用的
+     *       note/data 结构，内容取任务名称；</li>
+     *   <li>已有 meta 信息：在原始元数据上只替换纯文本 data 的 content，
+     *       保留提醒、背景色、文件夹等本地属性。</li>
+     * </ul>
+     *
+     * <p>任务名称为 null 时视为空便签，返回 null 让上层跳过创建。</p>
+     */
     public JSONObject getLocalJSONFromContent() {
         String name = getName();
         try {
@@ -247,6 +302,10 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 关联从 MetaData 节点解析出的便签元数据。
+     * 元数据 notes 不是合法 JSON 时只清空缓存并记录警告，不中断同步。
+     */
     public void setMetaInfo(MetaData metaData) {
         if (metaData != null && metaData.getNotes() != null) {
             try {
@@ -258,6 +317,24 @@ public class Task extends Node {
         }
     }
 
+    /**
+     * 判断单条便签的同步方向。
+     *
+     * <p>判定依据是本地 {@code local_modified}、上次同步时间 {@code sync_id}
+     * 与远端 {@code last_modified} 的关系：</p>
+     * <ul>
+     *   <li>本地未改且远端时间未变：{@link #SYNC_ACTION_NONE}；</li>
+     *   <li>本地未改但远端已变：{@link #SYNC_ACTION_UPDATE_LOCAL}；</li>
+     *   <li>本地已改且远端未变：{@link #SYNC_ACTION_UPDATE_REMOTE}；</li>
+     *   <li>两侧都改：{@link #SYNC_ACTION_UPDATE_CONFLICT}；</li>
+     *   <li>远端元数据缺失、便签 ID 不匹配或 GID 不匹配：按可恢复程度返回
+     *       {@link #SYNC_ACTION_UPDATE_REMOTE}/{@link #SYNC_ACTION_UPDATE_LOCAL}/
+     *       {@link #SYNC_ACTION_ERROR}。</li>
+     * </ul>
+     *
+     * <p>任何解析异常都会兜底为 {@link #SYNC_ACTION_ERROR}，避免在状态不明时
+     * 误删或误覆盖用户数据。</p>
+     */
     public int getSyncAction(Cursor c) {
         try {
             JSONObject noteInfo = null;
@@ -311,6 +388,11 @@ public class Task extends Node {
         return SYNC_ACTION_ERROR;
     }
 
+    /**
+     * 判断任务是否包含可保存的内容。
+     * 有元数据、非空名称或非空 notes 三者满足其一即可；全空任务会被跳过，
+     * 防止在远端产生无意义的空记录。
+     */
     public boolean isWorthSaving() {
         return mMetaInfo != null || (getName() != null && getName().trim().length() > 0)
                 || (getNotes() != null && getNotes().trim().length() > 0);

@@ -35,11 +35,23 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
+/**
+ * 本地 {@code data} 表一行的内存缓存，代表便签的一条内容数据（如纯文本、通话记录）。
+ *
+ * <p>同步时，远端 JSON 只携带变化过的字段；本类用 {@link #mDiffDataValues}
+ * 记录“与上次加载值不同”的列，{@link #commit(long, boolean, long)} 再把这些列
+ * 写入 ContentProvider，避免整行覆盖。</p>
+ *
+ * <p>新建对象与从游标加载的对象行为不同：新建时所有字段都进入 diff，提交时执行
+ * insert；从游标加载后只有真正变化的字段进入 diff，提交时执行 update。</p>
+ */
 public class SqlData {
     private static final String TAG = SqlData.class.getSimpleName();
 
+    /** 新建对象尚未落库时的占位 ID。 */
     private static final int INVALID_ID = -99999;
 
+    /** 查询 data 表时固定使用的列，下标与下面的常量一一对应。 */
     public static final String[] PROJECTION_DATA = new String[] {
             DataColumns.ID, DataColumns.MIME_TYPE, DataColumns.CONTENT, DataColumns.DATA1,
             DataColumns.DATA3
@@ -57,6 +69,7 @@ public class SqlData {
 
     private ContentResolver mContentResolver;
 
+    /** true 表示这条 data 还没有插入数据库；提交后置为 false。 */
     private boolean mIsCreate;
 
     private long mDataId;
@@ -69,8 +82,13 @@ public class SqlData {
 
     private String mDataContentData3;
 
+    /** 待写入的差异列；提交成功后清空。 */
     private ContentValues mDiffDataValues;
 
+    /**
+     * 创建一个尚未落库的新 data 行，使用纯文本便签的默认值。
+     * 提交时走 insert 分支。
+     */
     public SqlData(Context context) {
         mContentResolver = context.getContentResolver();
         mIsCreate = true;
@@ -82,6 +100,10 @@ public class SqlData {
         mDiffDataValues = new ContentValues();
     }
 
+    /**
+     * 从已有的 data 查询游标加载一行。
+     * 当前游标必须已定位到有效行；加载后视为已落库，提交时走 update 分支。
+     */
     public SqlData(Context context, Cursor c) {
         mContentResolver = context.getContentResolver();
         mIsCreate = false;
@@ -89,6 +111,10 @@ public class SqlData {
         mDiffDataValues = new ContentValues();
     }
 
+    /**
+     * 按 {@link #PROJECTION_DATA} 的固定下标读取各列。
+     * 调用方必须保证游标列顺序与本类常量一致。
+     */
     private void loadFromCursor(Cursor c) {
         mDataId = c.getLong(DATA_ID_COLUMN);
         mDataMimeType = c.getString(DATA_MIME_TYPE_COLUMN);
@@ -97,6 +123,15 @@ public class SqlData {
         mDataContentData3 = c.getString(DATA_CONTENT_DATA_3_COLUMN);
     }
 
+    /**
+     * 用远端/本地 JSON 更新字段，并把发生变化的列记入差异集合。
+     *
+     * <p>字段缺失时使用默认值：ID 用 {@link #INVALID_ID}，MIME 用纯文本，
+     * 内容用空串，DATA1 用 0，DATA3 用空串。新建对象时所有字段都视为变化，
+     * 保证 insert 能写完整行。</p>
+     *
+     * @throws JSONException JSON 字段类型与预期不符时抛出，由调用方决定是否中止同步
+     */
     public void setContent(JSONObject js) throws JSONException {
         long dataId = js.has(DataColumns.ID) ? js.getLong(DataColumns.ID) : INVALID_ID;
         if (mIsCreate || mDataId != dataId) {
@@ -130,6 +165,10 @@ public class SqlData {
         mDataContentData3 = dataContentData3;
     }
 
+    /**
+     * 导出当前行的完整 JSON。
+     * 尚未插入数据库的对象没有稳定的 data ID，无法安全导出，因此返回 null。
+     */
     public JSONObject getContent() throws JSONException {
         if (mIsCreate) {
             Log.e(TAG, "it seems that we haven't created this in database yet");
@@ -144,6 +183,21 @@ public class SqlData {
         return js;
     }
 
+    /**
+     * 把差异写入本地数据库。
+     *
+     * <p>新建对象执行 insert：先去掉无效的占位 ID，再补上所属便签 ID，
+     * 最后从返回 Uri 中解析真正的 data ID。</p>
+     *
+     * <p>已有对象执行 update：若 {@code validateVersion} 为 true，会附加
+     * “便签 ID 匹配且版本号不大于当前版本”的条件，实现乐观并发控制，
+     * 防止同步期间用户又修改便签导致覆盖新内容。更新影响 0 行时只记录警告，
+     * 不抛异常，因为并发修改属于可恢复情况。</p>
+     *
+     * @param noteId          所属便签 ID，新建时写入外键
+     * @param validateVersion 是否附带版本条件
+     * @param version         当前同步批次使用的便签版本号
+     */
     public void commit(long noteId, boolean validateVersion, long version) {
 
         if (mIsCreate) {
