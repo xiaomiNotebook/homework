@@ -7,3 +7,8 @@ project.properties
 .settings/
 .classpath
 .project
+
+# Gradle 本机构建环境与产物（不提交）
+.gradle/
+build/
+local.properties
