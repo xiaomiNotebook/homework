@@ -30,6 +30,14 @@ import net.micode.notes.tool.DataUtils;
 import net.micode.notes.tool.ResourceParser.NoteItemBgResources;
 
 
+/**
+ * 便签列表的一行视图，把 {@link NoteItemData} 快照渲染到 note_item 布局。
+ *
+ * <p>职责：处理三类展示分支——通话记录文件夹、通话记录便签、普通便签/文件夹；
+ * 并按相邻行关系选择背景资源，使同一文件夹下的便签在视觉上成组。
+ * 生命周期：由 {@link NotesListAdapter#bindView} 在滚动复用时反复调用 bind，构造时只 inflate 一次。
+ * 边界：只有选择模式下的便签行显示 CheckBox；时间统一显示为相对时间。
+ */
 public class NotesListItem extends LinearLayout {
     private ImageView mAlert;
     private TextView mTitle;
@@ -38,6 +46,7 @@ public class NotesListItem extends LinearLayout {
     private NoteItemData mItemData;
     private CheckBox mCheckBox;
 
+    /** 构造时 inflate 布局并缓存全部子视图，避免滚动时重复 findViewById。 */
     public NotesListItem(Context context) {
         super(context);
         inflate(context, R.layout.note_item, this);
@@ -48,6 +57,11 @@ public class NotesListItem extends LinearLayout {
         mCheckBox = (CheckBox) findViewById(android.R.id.checkbox);
     }
 
+    /**
+     * 用数据快照刷新整行。
+     * 前置条件：data 非空且由当前 Cursor 构造；checked 仅在选择模式下生效。
+     * 非显然逻辑：通话记录文件夹本身与通话记录便签分别走不同分支，标题样式和图标来源都不同。
+     */
     public void bind(Context context, NoteItemData data, boolean choiceMode, boolean checked) {
         if (choiceMode && data.getType() == Notes.TYPE_NOTE) {
             mCheckBox.setVisibility(View.VISIBLE);
@@ -56,6 +70,7 @@ public class NotesListItem extends LinearLayout {
             mCheckBox.setVisibility(View.GONE);
         }
 
+        // 缓存当前快照，供 Activity 在点击/长按该行时取回对应便签或文件夹。
         mItemData = data;
         if (data.getId() == Notes.ID_CALL_RECORD_FOLDER) {
             mCallName.setVisibility(View.GONE);
@@ -94,11 +109,18 @@ public class NotesListItem extends LinearLayout {
                 }
             }
         }
+        // 时间展示为“x 分钟前”等相对格式，不显示绝对时间，避免布局宽度抖动。
         mTime.setText(DateUtils.getRelativeTimeSpanString(data.getModifiedDate()));
 
         setBackground(data);
     }
 
+    /**
+     * 按行在分组中的位置选择背景，拼出连续的列表视觉效果。
+     * 非显然算法：单条或紧跟文件夹的唯一便签用 single 背景；
+     * 最后一条用 last，第一条或文件夹后多条中的首条用 first，其余用 normal。
+     * 文件夹不参与分组拼接，统一使用文件夹背景。
+     */
     private void setBackground(NoteItemData data) {
         int id = data.getBgColorId();
         if (data.getType() == Notes.TYPE_NOTE) {
@@ -116,6 +138,7 @@ public class NotesListItem extends LinearLayout {
         }
     }
 
+    /** 返回当前绑定的快照；点击与长按事件依赖它判断行类型并取得 ID。 */
     public NoteItemData getItemData() {
         return mItemData;
     }
