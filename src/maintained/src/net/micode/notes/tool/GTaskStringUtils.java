@@ -16,7 +16,20 @@
 
 package net.micode.notes.tool;
 
+/**
+ * Google Tasks 同步协议和 MIUI 便签元数据使用的字符串常量。
+ *
+ * <p>这些常量同时出现在请求 JSON、响应 JSON 和本地 meta JSON 中，集中定义可以
+ * 避免各层手写字符串导致拼写不一致。修改任何 key 都会影响与远端的兼容性，
+ * 不能随意重命名。</p>
+ *
+ * <p>本类只保存常量，不包含逻辑，也不应被实例化。</p>
+ */
 public class GTaskStringUtils {
+
+    // ------------------------------------------------------------------
+    // 动作协议：action_list 中每个动作的编号、类型，以及批量操作名称
+    // ------------------------------------------------------------------
 
     public final static String GTASK_JSON_ACTION_ID = "action_id";
 
@@ -31,6 +44,10 @@ public class GTaskStringUtils {
     public final static String GTASK_JSON_ACTION_TYPE_MOVE = "move";
 
     public final static String GTASK_JSON_ACTION_TYPE_UPDATE = "update";
+
+    // ------------------------------------------------------------------
+    // 任务/分组的实体字段
+    // ------------------------------------------------------------------
 
     public final static String GTASK_JSON_CREATOR_ID = "creator_id";
 
@@ -88,26 +105,43 @@ public class GTaskStringUtils {
 
     public final static String GTASK_JSON_TYPE = "type";
 
+    // 远端实体类型只有任务和分组两种；分组对应本地文件夹。
     public final static String GTASK_JSON_TYPE_GROUP = "GROUP";
 
     public final static String GTASK_JSON_TYPE_TASK = "TASK";
 
     public final static String GTASK_JSON_USER = "user";
 
+    // ------------------------------------------------------------------
+    // MIUI 便签与远端任务之间的命名约定
+    // ------------------------------------------------------------------
+
+    /** 普通文件夹同步到远端时统一加此前缀，避免与用户任务重名。 */
     public final static String MIUI_FOLDER_PREFFIX = "[MIUI_Notes]";
 
+    /** 根文件夹在远端使用的固定名称（去掉前缀后的部分）。 */
     public final static String FOLDER_DEFAULT = "Default";
 
+    /** 通话记录文件夹在远端使用的固定名称。 */
     public final static String FOLDER_CALL_NOTE = "Call_Note";
 
+    /** 元数据任务的固定名称。 */
     public final static String FOLDER_META = "METADATA";
 
+    // ------------------------------------------------------------------
+    // 本地 meta JSON 的结构 key
+    // ------------------------------------------------------------------
+
+    /** 元数据中保存的、关联普通任务的 GID。 */
     public final static String META_HEAD_GTASK_ID = "meta_gid";
 
+    /** 本地便签主记录的 JSON 对象 key。 */
     public final static String META_HEAD_NOTE = "meta_note";
 
+    /** 本地便签内容数据数组的 JSON 对象 key。 */
     public final static String META_HEAD_DATA = "meta_data";
 
+    /** 元数据任务的显示名称；明确提示用户和同步逻辑不要修改或删除。 */
     public final static String META_NOTE_NAME = "[META INFO] DON'T UPDATE AND DELETE";
 
 }
