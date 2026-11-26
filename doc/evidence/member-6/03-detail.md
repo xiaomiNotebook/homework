@@ -14,6 +14,7 @@
 | `src/maintained/res/layout/activity_note_stats.xml` | 新增 | 统计页布局 |
 | `src/maintained/res/layout/activity_note_reading.xml` | 新增 | 阅读页布局 |
 | `src/maintained/res/drawable/stats_card_bg.xml` | 新增 | 统计卡片背景 |
+| `src/maintained/res/drawable/ic_overflow_menu.xml` | 新增 | 顶部“更多”入口图标（竖向三点） |
 | `src/maintained/src/test/java/net/micode/notes/tool/NoteStatsCalculatorTest.java` | 新增 | 统计逻辑单元测试（7 条） |
 | `src/maintained/src/test/java/net/micode/notes/tool/ReadingPrefsTest.java` | 新增 | 阅读偏好单元测试（5 条） |
 
@@ -26,7 +27,9 @@
 | `NotesListActivity.java` | `onOptionsItemSelected` 新增一个 `case` | 只新增分支，不改动既有分支 |
 | `NoteEditActivity.java` | 新增 `openReadingMode()` 与一个 `case` | 只新增方法/分支，不改动既有逻辑 |
 | `AndroidManifest.xml` | 注册两个新 Activity | 只新增节点 |
-| `res/values/strings.xml`、`res/values-zh-rCN/strings.xml` | 新增 `stats_*`、`reading_*` 文案 | 只新增字符串，不改既有键 |
+| `res/values/strings.xml`、`res/values-zh-rCN/strings.xml` | 新增 `stats_*`、`reading_*`、`menu_overflow` 文案 | 只新增字符串，不改既有键 |
+| `res/layout/note_list.xml`、`res/layout/note_edit.xml` | 顶部新增可见“更多”入口 `btn_overflow_menu` | 只加一行图标，不改动列表、正文与既有按钮 |
+| `NotesListActivity.java`、`NoteEditActivity.java` | 绑定 `btn_overflow_menu`，点击调用 `openOptionsMenu()` | 只新增监听，不改动既有菜单项与分支 |
 
 > 测试依赖（`build.gradle` 的 `testImplementation junit` 与 `java.exclude 'test/**'`）**不在本分支**，见独立分支 `test/junit-dependency` 与独立 PR，避免与功能 PR 混合。
 
@@ -149,8 +152,16 @@ startActivity(intent);
 | Activity | `NoteStatsActivity`、`NoteReadingActivity` |
 | 自定义 View | `StatsBarChartView` |
 | 布局 | `activity_note_stats`、`activity_note_reading` |
-| drawable | `stats_card_bg` |
+| drawable | `stats_card_bg`、`ic_overflow_menu` |
 | 偏好文件 | `note_reading_preferences` |
 | 工具类 | `NoteStatsCalculator`、`NoteStatsRepository`、`ReadingPrefs`、`ReadingPreferenceStore` |
 
 另外请避开既有菜单 id：`menu_setting`、`menu_share`、`menu_search`、`menu_delete`、`menu_move`、`menu_font_size` 等，新增项统一使用 `menu_<功能>` 命名。
+
+### 6.6 可见入口（无物理菜单键的设备）
+
+原界面只有物理 MENU 键能弹出菜单，模拟器与新机型没有该键。统一做法：
+
+1. 在页面顶部加一个可见的“⋮”图标：`@+id/btn_overflow_menu`，`ImageButton` 36dip、背景透明、`contentDescription` 为 `@string/menu_overflow`、图标为 `@drawable/ic_overflow_menu`；单独占一行放在内容上方，不覆盖便签内容与既有按钮。
+2. 点击事件统一调用 `openOptionsMenu()`，等价于按物理菜单键；原有菜单项、顺序、id 一律不改。
+3. 新增页面若也需要菜单入口，复用同一套 id / 图标 / 字符串命名，不要另造一套。`menu_overflow`、`btn_overflow_menu`、`ic_overflow_menu` 已被占用。

@@ -49,6 +49,17 @@
 | 代码 | `after/member6-M10-code-reading-activity-20261126.png` | `NoteReadingActivity` 偏好应用与渲染实现 |
 | 代码 | `after/member6-M10-code-reading-prefs-20261126.png` | `ReadingPrefs` 阅读时长估算与档位映射实现 |
 
+### 2.3 可见“更多”入口（替代物理 MENU 键）
+
+| 阶段 | 文件 | 说明 |
+|---|---|---|
+| 修改后 | `after/member6-M09-stats-overflow-entry-20261126.png` | 列表页顶部新增可见“⋮”，位于便签内容上方，不遮挡条目与“写便签”按钮 |
+| 修改后 | `after/member6-M09-stats-overflow-menu-20261126.png` | 点击列表页“⋮”弹出原有菜单，“使用统计”等原有项与顺序不变 |
+| 修改后 | `after/member6-M10-reading-overflow-entry-20261126.png` | 编辑页顶部新增可见“⋮”，不与右上角调色按钮重叠，不遮挡正文 |
+| 修改后 | `after/member6-M10-reading-overflow-menu-20261126.png` | 点击编辑页“⋮”弹出原有菜单，“阅读模式”等原有项与顺序不变 |
+
+实测：由“⋮”进入“使用统计”可见便签总数/累计字符等数据；由“⋮”选择“阅读模式”可正常进入阅读页。
+
 ## 3. 对比结论
 
 1. **入口**：基线的列表菜单与编辑菜单均无新入口；新版本各新增一项，且未改变原有菜单项的顺序与文案。
