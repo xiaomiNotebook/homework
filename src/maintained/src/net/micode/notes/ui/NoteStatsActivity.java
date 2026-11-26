@@ -93,7 +93,15 @@ public class NoteStatsActivity extends Activity implements OnClickListener {
 
         mRange7Button.setOnClickListener(this);
         mRange30Button.setOnClickListener(this);
+    }
 
+    /**
+     * 每次回到页面都重新统计：用户在便签列表新增、删除或从回收站恢复便签后再进入统计页，
+     * 数字必须是最新的，因此把刷新放在 onResume 而不是只在 onCreate 里执行一次。
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
         loadStats();
     }
 
