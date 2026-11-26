@@ -143,6 +143,8 @@
 
     <!-- M10 沉浸式阅读模式 -->
     <string name="menu_reading_mode">阅读模式</string>
+    <!-- 顶部“更多”入口：等价于按物理菜单键 -->
+    <string name="menu_overflow">更多选项</string>
     <string name="reading_title">阅读模式</string>
     <string name="reading_back">返回</string>
     <string name="reading_time_cost">约 %1$d 分钟读完</string>

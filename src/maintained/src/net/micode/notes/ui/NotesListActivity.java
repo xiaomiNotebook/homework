@@ -141,6 +141,14 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
         setContentView(R.layout.note_list);
         initResources();
 
+        // 顶部“更多”入口：没有物理菜单键的设备也能弹出原有菜单，菜单项与顺序不做任何改动。
+        findViewById(R.id.btn_overflow_menu).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openOptionsMenu();
+            }
+        });
+
         /**
          * Insert an introduction when user firstly use this application
          */
