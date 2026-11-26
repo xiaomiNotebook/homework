@@ -35,6 +35,10 @@
         android:title="@string/menu_list_mode" />
 
     <item
+        android:id="@+id/menu_reading_mode"
+        android:title="@string/menu_reading_mode"/>
+
+    <item
         android:id="@+id/menu_share"
         android:title="@string/menu_share"/>
 

@@ -641,6 +641,9 @@ public class NoteEditActivity extends Activity implements OnClickListener,
                 mWorkingNote.setCheckListMode(mWorkingNote.getCheckListMode() == 0 ?
                         TextNote.MODE_CHECK_LIST : 0);
                 break;
+            case R.id.menu_reading_mode:
+                openReadingMode();
+                break;
             case R.id.menu_share:
                 getWorkingText();
                 sendTo(this, mWorkingNote.getContent());
@@ -996,6 +999,19 @@ public class NoteEditActivity extends Activity implements OnClickListener,
      * id）作为快捷方式的目标，名称取正文的前 10 个字，再通过 INSTALL_SHORTCUT 广播通知桌面
      * 启动器创建。
      */
+    /**
+     * M10：进入沉浸式阅读模式。
+     *
+     * <p>先同步保存当前编辑内容，保证阅读页读到的是最新正文，而不是上次保存的旧内容；
+     * 只传递便签 id，阅读页自己做只读查询，因此阅读模式不会改动任何便签数据。
+     */
+    private void openReadingMode() {
+        saveNote();
+        Intent intent = new Intent(this, NoteReadingActivity.class);
+        intent.putExtra(NoteReadingActivity.EXTRA_NOTE_ID, mWorkingNote.getNoteId());
+        startActivity(intent);
+    }
+
     private void sendToDesktop() {
         /**
          * Before send message to home, we should make sure that current

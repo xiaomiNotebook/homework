@@ -805,6 +805,11 @@ public class NotesListActivity extends Activity implements OnClickListener, OnIt
                 startPreferenceActivity();
                 break;
             }
+            case R.id.menu_stats: {
+                // M09：打开便签使用统计页面，统计数据由该页面自行从 Provider 读取
+                startActivity(new Intent(this, NoteStatsActivity.class));
+                break;
+            }
             case R.id.menu_new_note: {
                 createNewNote();
                 break;
