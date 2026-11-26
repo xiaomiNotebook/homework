@@ -35,3 +35,9 @@ android {
         checkReleaseBuilds false
     }
 }
+
+dependencies {
+    // 单元测试依赖：让 src/maintained/src/test 下的 JVM 单元测试可以独立运行，
+    // 不改变打包产物，也不影响 release 构建。
+    testImplementation 'junit:junit:4.13.2'
+}
