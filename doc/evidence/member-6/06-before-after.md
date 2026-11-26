@@ -5,7 +5,7 @@
 | 项 | 值 |
 |---|---|
 | 设备 | Android 模拟器 `Medium_Phone_API_36.1`（Android 16 / API 36） |
-| 启动参数 | `emulator -avd Medium_Phone_API_36.1 -gpu angle -no-snapshot-load -no-boot-anim -no-audio -no-window` |
+| 启动参数 | `emulator -avd Medium_Phone_API_36.1 -gpu angle -no-snapshot-load -no-boot-anim -no-audio -no-window`（`angle` 不被该版本识别，模拟器日志显示自动回退为 `auto`：swiftshader + lavapipe Vulkan） |
 | 系统语言 | 简体中文 |
 | 对比基线 | `origin/develop`（提交 `1438da4`）构建的 debug APK |
 | 对比新版 | `member-6`（提交 `f23ff92`）构建的 debug APK |
@@ -20,7 +20,7 @@
 | `-gpu off` | 可启动，系统设置页也为空白，无法用于截图 |
 | `-gpu swiftshader_indirect -feature -Vulkan` | 模拟器进程启动即退出 |
 | `-gpu host` | 进程在启动后退出；改为常驻进程后系统服务无响应（boot 卡住） |
-| **`-gpu angle`（最终采用）** | 启动正常，`uiautomator` 可见界面节点，`screencap` 抓图正常，全部效果图均由该组合产出 |
+| **`-gpu angle`（最终采用）** | 该版本不识别 `angle`，日志显示自动回退 `auto`（swiftshader + lavapipe Vulkan）；此组合下启动正常、`uiautomator` 可见界面节点、`screencap` 抓图正常，全部效果图均由该组合产出 |
 
 ## 2. 截图索引
 
