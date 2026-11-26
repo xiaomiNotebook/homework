@@ -152,6 +152,8 @@
 
     <!-- M10 immersive reading mode -->
     <string name="menu_reading_mode">Reading mode</string>
+    <!-- Visible overflow entry: same as pressing the physical menu key -->
+    <string name="menu_overflow">More options</string>
     <string name="reading_title">Reading mode</string>
     <string name="reading_back">Back</string>
     <string name="reading_time_cost">About %1$d min read</string>

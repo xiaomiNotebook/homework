@@ -20,4 +20,5 @@
 3. **跳转方式**：一律显式 `Intent(context, XxxActivity.class)`；需要“最新正文/最新数据”时，先调用来源页面的保存方法再跳转；页面间只传 id 等小参数，正文由目标页面只读查询。
 4. **Activity 注册**：在 `AndroidManifest.xml` 以 `.ui.XxxActivity` 注册；沉浸式/全屏页用 `Theme.Holo.Light.NoActionBar` 并声明 `configChanges="keyboardHidden|orientation|screenSize"`，普通页沿用 `Theme.Holo.Light`；不修改其他 Activity 的 `launchMode` 与 `exported`。
 5. **命名避让**：以下已被 M09 / M10 占用，请勿复用——菜单 `menu_stats`、`menu_reading_mode`；字符串前缀 `stats_*`、`reading_*`；Activity `NoteStatsActivity`、`NoteReadingActivity`；View `StatsBarChartView`；布局 `activity_note_stats`、`activity_note_reading`；drawable `stats_card_bg`；偏好文件 `note_reading_preferences`；工具类 `NoteStatsCalculator`、`NoteStatsRepository`、`ReadingPrefs`、`ReadingPreferenceStore`。
+6. **可见入口**：菜单必须同时有可见入口，不能只依赖物理 MENU 键。页面顶部单独一行放 `ImageButton` `@+id/btn_overflow_menu`（36dip、透明背景、`@drawable/ic_overflow_menu`、`contentDescription=@string/menu_overflow`），点击调用 `openOptionsMenu()`；不改动原有菜单项与顺序，不覆盖便签内容与既有按钮。
 

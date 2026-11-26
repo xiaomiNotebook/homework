@@ -468,6 +468,14 @@ public class NoteEditActivity extends Activity implements OnClickListener,
             mFontSizeId = ResourceParser.BG_DEFAULT_FONT_SIZE;
         }
         mEditTextList = (LinearLayout) findViewById(R.id.note_edit_list);
+
+        // 顶部“更多”入口：等价于按物理菜单键，原有菜单项与顺序保持不变。
+        findViewById(R.id.btn_overflow_menu).setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openOptionsMenu();
+            }
+        });
     }
 
     // 离开界面（切到后台、按返回、被其他页面覆盖）时自动保存，用户不需要手动点保存；随后收
