@@ -123,4 +123,37 @@
         <item quantity="other"><xliff:g id="NUMBER">%1$s</xliff:g> 条符合“<xliff:g id="SEARCH">%2$s</xliff:g>”的搜索结果</item>
     </plurals>
 
+    <!-- M09 便签使用统计 -->
+    <string name="menu_stats">使用统计</string>
+    <string name="stats_title">便签使用统计</string>
+    <string name="stats_range_7">近 7 天</string>
+    <string name="stats_range_30">近 30 天</string>
+    <string name="stats_loading">统计中…</string>
+    <string name="stats_empty">暂无便签数据</string>
+    <string name="stats_total_notes">便签总数</string>
+    <string name="stats_total_characters">累计字符</string>
+    <string name="stats_recent_notes">近期新增（%1$d 天）</string>
+    <string name="stats_folders">文件夹数量</string>
+    <string name="stats_trend_title">新增便签趋势</string>
+    <string name="stats_folder_title">便签文件夹分布</string>
+    <string name="stats_others">其他</string>
+    <string name="stats_unclassified">未分类</string>
+    <string name="stats_root_folder">根目录</string>
+    <string name="stats_call_record_folder">通话记录</string>
+
+    <!-- M10 沉浸式阅读模式 -->
+    <string name="menu_reading_mode">阅读模式</string>
+    <string name="reading_title">阅读模式</string>
+    <string name="reading_back">返回</string>
+    <string name="reading_time_cost">约 %1$d 分钟读完</string>
+    <string name="reading_empty_note">该便签暂无内容</string>
+    <string name="reading_theme_light">主题：浅色</string>
+    <string name="reading_theme_eye_care">主题：护眼</string>
+    <string name="reading_theme_dark">主题：深色</string>
+    <string name="reading_font_small">字号：小</string>
+    <string name="reading_font_normal">字号：中</string>
+    <string name="reading_font_large">字号：大</string>
+    <string name="reading_spacing_tight">行距：紧凑</string>
+    <string name="reading_spacing_normal">行距：标准</string>
+    <string name="reading_spacing_loose">行距：宽松</string>
 </resources>
