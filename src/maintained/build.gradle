@@ -19,6 +19,9 @@ android {
         main {
             manifest.srcFile 'AndroidManifest.xml'
             java.srcDirs = ['src']
+            // 源码根目录是 src，默认会把 src/test 下的单元测试也当成主代码编译；
+            // 这里显式排除，让单元测试走独立的 test 源集，从而能使用 testImplementation 依赖。
+            java.exclude 'test/**'
             res.srcDirs = ['res']
         }
     }
