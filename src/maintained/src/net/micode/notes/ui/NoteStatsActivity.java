@@ -140,8 +140,8 @@ public class NoteStatsActivity extends Activity implements OnClickListener {
     private void render(NoteStatsRepository.Snapshot snapshot, int rangeDays) {
         long now = System.currentTimeMillis();
         Map<Long, String> folderNames = new HashMap<Long, String>(snapshot.folderNames);
-        folderNames.put(Notes.ID_ROOT_FOLDER, getString(R.string.stats_root_folder));
-        folderNames.put(Notes.ID_CALL_RECORD_FOLDER,
+        folderNames.put((long) Notes.ID_ROOT_FOLDER, getString(R.string.stats_root_folder));
+        folderNames.put((long) Notes.ID_CALL_RECORD_FOLDER,
                 getString(R.string.stats_call_record_folder));
 
         NoteStatsCalculator.Summary summary = NoteStatsCalculator.summarize(
