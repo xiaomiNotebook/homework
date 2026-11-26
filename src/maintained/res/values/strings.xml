@@ -132,4 +132,37 @@
         <item quantity="other"><xliff:g id="number" example="15">%1$s</xliff:g> results for \"<xliff:g id="search" example="???">%2$s</xliff:g>\"</item>
     </plurals>
 
+    <!-- M09 usage statistics -->
+    <string name="menu_stats">Usage statistics</string>
+    <string name="stats_title">Note usage statistics</string>
+    <string name="stats_range_7">Last 7 days</string>
+    <string name="stats_range_30">Last 30 days</string>
+    <string name="stats_loading">Calculating...</string>
+    <string name="stats_empty">No notes to count yet</string>
+    <string name="stats_total_notes">Notes</string>
+    <string name="stats_total_characters">Characters</string>
+    <string name="stats_recent_notes">Added in %1$d days</string>
+    <string name="stats_folders">Folders</string>
+    <string name="stats_trend_title">New notes trend</string>
+    <string name="stats_folder_title">Notes by folder</string>
+    <string name="stats_others">Others</string>
+    <string name="stats_unclassified">Unfiled</string>
+    <string name="stats_root_folder">Root</string>
+    <string name="stats_call_record_folder">Call notes</string>
+
+    <!-- M10 immersive reading mode -->
+    <string name="menu_reading_mode">Reading mode</string>
+    <string name="reading_title">Reading mode</string>
+    <string name="reading_back">Back</string>
+    <string name="reading_time_cost">About %1$d min read</string>
+    <string name="reading_empty_note">This note has no content</string>
+    <string name="reading_theme_light">Theme: Light</string>
+    <string name="reading_theme_eye_care">Theme: Eye care</string>
+    <string name="reading_theme_dark">Theme: Dark</string>
+    <string name="reading_font_small">Font: Small</string>
+    <string name="reading_font_normal">Font: Normal</string>
+    <string name="reading_font_large">Font: Large</string>
+    <string name="reading_spacing_tight">Spacing: Tight</string>
+    <string name="reading_spacing_normal">Spacing: Normal</string>
+    <string name="reading_spacing_loose">Spacing: Loose</string>
 </resources>
